@@ -9,6 +9,9 @@ import { IPC } from '../renderer/src/types/ipc'
 let mainWindow: BrowserWindow | null = null
 let pendingOpenPath: string | null = null
 let allowClose = false
+// Tracks whether the window close was triggered by Cmd+Q / app.quit()
+// so we can call app.quit() again after our async dialog finishes.
+let isQuitting = false
 
 // Must be registered before app.on('ready') on macOS
 app.on('open-file', (event, path) => {
@@ -19,6 +22,11 @@ app.on('open-file', (event, path) => {
   }
 })
 
+// Set the quitting flag as early as possible so the close handler can read it.
+app.on('before-quit', () => {
+  isQuitting = true
+})
+
 protocol.registerSchemesAsPrivileged([
   { scheme: 'media', privileges: { secure: true, standard: true, bypassCSP: true } }
 ])
@@ -27,8 +35,9 @@ function createWindow(): void {
   const isMac = process.platform === 'darwin'
   const isWin = process.platform === 'win32'
 
-  // Reset close guard for each new window
+  // Reset per-window flags
   allowClose = false
+  isQuitting = false
 
   // Resolve icon relative to the app root (works both in dev and after packaging)
   const appRoot = app.isPackaged ? join(__dirname, '../../..') : join(__dirname, '../../..')
@@ -76,8 +85,12 @@ function createWindow(): void {
   })
 
   mainWindow.on('close', async (event) => {
+    // Already cleared to close — let it through.
     if (allowClose) return
     event.preventDefault()
+
+    // Capture the quit intent before any async gap.
+    const shouldQuit = isQuitting
 
     const isDirty = await mainWindow!.webContents.executeJavaScript(
       'window.__lumina_isDirty__ || false'
@@ -86,6 +99,8 @@ function createWindow(): void {
     if (!isDirty) {
       allowClose = true
       mainWindow!.close()
+      // If Cmd+Q triggered this, close() alone won't quit on macOS — do it explicitly.
+      if (shouldQuit) app.quit()
       return
     }
 
@@ -99,16 +114,20 @@ function createWindow(): void {
     })
 
     if (choice === 0) {
+      // Ask renderer to save, then close after a short grace period.
       mainWindow!.webContents.send(IPC.PUSH_MENU_SAVE)
       setTimeout(() => {
         allowClose = true
         mainWindow?.close()
+        if (shouldQuit) app.quit()
       }, 500)
     } else if (choice === 1) {
       allowClose = true
       mainWindow!.close()
+      if (shouldQuit) app.quit()
     }
-    // choice === 2: Cancel — do nothing
+    // choice === 2: Cancel — stay open, clear the quit flag.
+    isQuitting = false
   })
 
   buildMenu(mainWindow)
@@ -136,6 +155,7 @@ app.whenReady().then(() => {
   ipcMain.on('app:close-after-save', () => {
     allowClose = true
     mainWindow?.close()
+    if (isQuitting) app.quit()
   })
 
   // Push OS theme changes to the renderer
