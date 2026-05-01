@@ -32,7 +32,7 @@ export function useFile(editor: Editor | null): {
       await window.api.addRecentFile(result.path)
       const recents = await window.api.getRecentFiles()
       setRecentFiles(recents)
-      document.title = `${result.path.split('/').pop()} — Lumina`
+      document.title = `${result.path.split(/[/\\]/).pop()} — Lumina`
     },
     [setFile, loadContent, setRecentFiles]
   )
@@ -51,7 +51,7 @@ export function useFile(editor: Editor | null): {
     await window.api.addRecentFile(result.path)
     const recents = await window.api.getRecentFiles()
     setRecentFiles(recents)
-    document.title = `${result.path.split('/').pop()} — Lumina`
+    document.title = `${result.path.split(/[/\\]/).pop()} — Lumina`
   }, [setFile, loadContent, setRecentFiles])
 
   const getMarkdown = useCallback((): string => {
@@ -84,7 +84,7 @@ export function useFile(editor: Editor | null): {
     await window.api.addRecentFile(result.path)
     const recents = await window.api.getRecentFiles()
     setRecentFiles(recents)
-    document.title = `${result.path.split('/').pop()} — Lumina`
+    document.title = `${result.path.split(/[/\\]/).pop()} — Lumina`
   }, [getMarkdown, setFile, markDirty, setRecentFiles])
 
   // Listen for menu-triggered open/save
@@ -109,7 +109,7 @@ export function useFile(editor: Editor | null): {
       if (!result) return
       setFile({ path: result.path, content: result.content, isDirty: false })
       loadContent(result.content)
-      document.title = `${result.path.split('/').pop()} — Lumina`
+      document.title = `${result.path.split(/[/\\]/).pop()} — Lumina`
     })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 

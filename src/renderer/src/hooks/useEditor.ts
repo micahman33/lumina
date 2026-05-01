@@ -1,6 +1,15 @@
-import { useEditor as useTiptapEditor } from '@tiptap/react'
+import { useEditor as useTiptapEditor, ReactNodeViewRenderer } from '@tiptap/react'
 import { Extension } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
+import CodeBlock from '@tiptap/extension-code-block'
+import { CodeBlockView } from '../components/editor/CodeBlockView'
+
+// CodeBlock extended with a React NodeView for the language picker pill
+const CodeBlockWithPicker = CodeBlock.extend({
+  addNodeView() {
+    return ReactNodeViewRenderer(CodeBlockView)
+  }
+})
 import { Image } from '@tiptap/extension-image'
 import { Link } from '@tiptap/extension-link'
 import { Table } from '@tiptap/extension-table'
@@ -31,8 +40,10 @@ export function useEditor() {
   const editor = useTiptapEditor({
     extensions: [
       StarterKit.configure({
-        // Disable history here; it's included but we want default undo/redo
+        // Replaced by CodeBlockWithPicker below
+        codeBlock: false
       }),
+      CodeBlockWithPicker,
       Markdown.configure({
         html: false,
         transformPastedText: true,

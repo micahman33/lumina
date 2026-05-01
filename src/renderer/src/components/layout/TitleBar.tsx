@@ -5,7 +5,7 @@ export function TitleBar(): JSX.Element {
   const isDirty = useAppStore((s) => s.file.isDirty)
   const isMac = navigator.platform.toLowerCase().includes('mac')
 
-  const fileName = filePath ? filePath.split('/').pop() ?? 'Untitled' : 'Untitled'
+  const fileName = filePath ? filePath.split(/[/\\]/).pop() ?? 'Untitled' : 'Untitled'
 
   return (
     <div
