@@ -27,6 +27,9 @@ function createWindow(): void {
   const isMac = process.platform === 'darwin'
   const isWin = process.platform === 'win32'
 
+  // Reset close guard for each new window
+  allowClose = false
+
   // Resolve icon relative to the app root (works both in dev and after packaging)
   const appRoot = app.isPackaged ? join(__dirname, '../../..') : join(__dirname, '../../..')
   const iconPath = isWin
@@ -56,19 +59,12 @@ function createWindow(): void {
   applyWindowState(mainWindow)
   trackWindowState(mainWindow)
 
-  // Redirect all external link clicks to the system browser instead of a new Electron window
+  // Redirect all window.open / target=_blank calls to the system browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('mailto:')) {
       shell.openExternal(url)
     }
     return { action: 'deny' }
-  })
-
-  // Allow renderer to trigger shell.openExternal for link clicks
-  ipcMain.handle('shell:open-external', (_, url: string) => {
-    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('mailto:')) {
-      shell.openExternal(url)
-    }
   })
 
   mainWindow.once('ready-to-show', () => {
@@ -83,11 +79,11 @@ function createWindow(): void {
     if (allowClose) return
     event.preventDefault()
 
-    const result = await mainWindow!.webContents.executeJavaScript(
+    const isDirty = await mainWindow!.webContents.executeJavaScript(
       'window.__lumina_isDirty__ || false'
     )
 
-    if (!result) {
+    if (!isDirty) {
       allowClose = true
       mainWindow!.close()
       return
@@ -103,9 +99,7 @@ function createWindow(): void {
     })
 
     if (choice === 0) {
-      // Save then close
       mainWindow!.webContents.send(IPC.PUSH_MENU_SAVE)
-      // Give the renderer a moment to save, then close
       setTimeout(() => {
         allowClose = true
         mainWindow?.close()
@@ -117,20 +111,7 @@ function createWindow(): void {
     // choice === 2: Cancel — do nothing
   })
 
-  registerAllHandlers()
-  registerMediaProtocol()
   buildMenu(mainWindow)
-
-  nativeTheme.on('updated', () => {
-    const theme = nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
-    mainWindow?.webContents.send(IPC.PUSH_THEME_CHANGE, theme)
-  })
-
-  // IPC to reset the allow-close flag after save completes
-  ipcMain.on('app:close-after-save', () => {
-    allowClose = true
-    mainWindow?.close()
-  })
 
   if (process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
@@ -140,8 +121,32 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  // Register all IPC handlers once — NOT inside createWindow()
+  registerAllHandlers()
+  registerMediaProtocol()
+
+  // shell:open-external — used by the renderer for link clicks
+  ipcMain.handle('shell:open-external', (_, url: string) => {
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('mailto:')) {
+      shell.openExternal(url)
+    }
+  })
+
+  // Sent by renderer after it finishes saving when close was triggered
+  ipcMain.on('app:close-after-save', () => {
+    allowClose = true
+    mainWindow?.close()
+  })
+
+  // Push OS theme changes to the renderer
+  nativeTheme.on('updated', () => {
+    const theme = nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
+    mainWindow?.webContents.send(IPC.PUSH_THEME_CHANGE, theme)
+  })
+
   createWindow()
 
+  // macOS: re-create window when clicking dock icon with no windows open
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
