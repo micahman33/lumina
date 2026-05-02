@@ -1,6 +1,6 @@
 import { ipcMain, dialog, BrowserWindow, app } from 'electron'
 import { readFile, writeFile, mkdir } from 'fs/promises'
-import { basename, join } from 'path'
+import { basename, extname, join } from 'path'
 import { IPC } from '../../renderer/src/types/ipc'
 import store from '../store'
 import { WELCOME_CONTENT } from '../welcome'
@@ -56,10 +56,15 @@ export function registerFileHandlers(): void {
     }
   })
 
-  ipcMain.handle(IPC.FILE_SAVE_AS, async (_, content: string) => {
+  ipcMain.handle(IPC.FILE_SAVE_AS, async (_, content: string, currentPath?: string) => {
     const win = BrowserWindow.getFocusedWindow()
+    // Strip extension from the current filename (if any) so macOS auto-appends
+    // the correct extension when the user picks a Format — no double-extension confusion.
+    const baseName = currentPath
+      ? basename(currentPath, extname(currentPath))
+      : 'untitled'
     const result = await dialog.showSaveDialog(win!, {
-      defaultPath: join(luminaDir(), 'untitled.md'),
+      defaultPath: join(luminaDir(), baseName),
       filters: [
         { name: 'Markdown', extensions: ['md'] },
         { name: 'Plain Text', extensions: ['txt'] },

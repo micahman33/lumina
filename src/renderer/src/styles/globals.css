@@ -249,6 +249,30 @@ body,
   background: rgba(91, 108, 255, 0.15);
 }
 
+/* ── TXT mode — tight line spacing, no paragraph or list gaps ───────────── */
+/* Paragraphs are line-faithful (one node per line), so we strip prose margins
+   to match what TextEdit / Notepad would show.                               */
+.txt-mode .ProseMirror p {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  line-height: 1.6;
+}
+/* Lists that were auto-detected on open should also sit tight — no extra
+   breathing room above/below the list or between items.                      */
+.txt-mode .ProseMirror ul,
+.txt-mode .ProseMirror ol {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+.txt-mode .ProseMirror li {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+.txt-mode .ProseMirror li > p {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
 /* ── Syntax highlighting (lowlight / highlight.js tokens) ────────────────── */
 /* Light mode */
 .hljs-comment, .hljs-quote          { color: #6e7781; font-style: italic; }

@@ -14,6 +14,7 @@ interface EditorCoreProps {
 
 export function EditorCore({ editor, insertImageRef }: EditorCoreProps): JSX.Element {
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({ x: 0, y: 0, visible: false })
+  const fileType = useAppStore((s) => s.file.fileType)
 
   const handleDrop = useCallback(
     async (e: React.DragEvent<HTMLDivElement>) => {
@@ -85,7 +86,7 @@ export function EditorCore({ editor, insertImageRef }: EditorCoreProps): JSX.Ele
 
   return (
     <div
-      className="flex-1 overflow-y-auto relative lm-bg"
+      className={`flex-1 overflow-y-auto relative lm-bg${fileType === 'txt' ? ' txt-mode' : ''}`}
       onDrop={handleDrop}
       onDragOver={(e) => e.preventDefault()}
       onContextMenu={handleContextMenu}

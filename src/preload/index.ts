@@ -17,8 +17,8 @@ const api = {
   saveFile: (path: string, content: string): Promise<boolean> =>
     ipcRenderer.invoke(IPC.FILE_SAVE, path, content),
 
-  saveFileAs: (content: string): Promise<SaveAsResult | null> =>
-    ipcRenderer.invoke(IPC.FILE_SAVE_AS, content),
+  saveFileAs: (content: string, currentPath?: string): Promise<SaveAsResult | null> =>
+    ipcRenderer.invoke(IPC.FILE_SAVE_AS, content, currentPath),
 
   readInitialFile: (): Promise<OpenFileResult | null> =>
     ipcRenderer.invoke(IPC.FILE_READ_INITIAL),

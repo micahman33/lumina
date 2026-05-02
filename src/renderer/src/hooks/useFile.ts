@@ -30,74 +30,124 @@ function extractSnippet(content: string, fileType: FileType = 'md', maxLen = 300
 
 /**
  * Build a ProseMirror JSON document from raw plain text.
- * Detects simple `- item` / `1. item` list patterns; everything else is a paragraph.
- * Using JSON bypasses tiptap-markdown's content parser entirely.
+ *
+ * Strategy: scan line-by-line. Blank lines (\n\n) flush the current block and
+ * become empty paragraph nodes (preserving the blank line on round-trip).
+ * Non-blank lines accumulate into a "block". When a block is flushed:
+ *   - ALL lines match `- item`  → bulletList node
+ *   - ALL lines match `1. item` → orderedList node
+ *   - Otherwise → one paragraph node per line (tight, no merging)
+ *
+ * This means:
+ *   • "1. Micah\n2. Smith" without a preceding blank line → plain text paragraphs
+ *   • "\n1. Micah\n2. Smith\n" (blank-line delimited) → formatted numbered list
+ *
+ * Serializing back with serializeTxt round-trips perfectly — the file on disk
+ * always stays as plain text with `1.`/`-` markers intact.
  */
 function buildTxtDoc(raw: string): object {
-  const content: object[] = []
-  const blocks = raw.split(/\r?\n\r?\n+/)
+  const lines = raw.split(/\r?\n/)
+  if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop()
 
-  for (const block of blocks) {
-    const trimmed = block.trim()
-    if (!trimmed) continue
-    const lines = trimmed.split(/\r?\n/)
+  const nodes: object[] = []
+  let block: string[] = []
 
-    if (lines.every((l) => /^[-*+]\s/.test(l))) {
-      content.push({
+  const flushBlock = (): void => {
+    if (block.length === 0) return
+    if (block.every((l) => /^[-*+]\s/.test(l))) {
+      nodes.push({
         type: 'bulletList',
-        content: lines.map((l) => ({
+        content: block.map((l) => ({
           type: 'listItem',
           content: [{ type: 'paragraph', content: [{ type: 'text', text: l.replace(/^[-*+]\s+/, '') }] }]
         }))
       })
-      continue
-    }
-
-    if (lines.every((l) => /^\d+\.\s/.test(l))) {
-      content.push({
+    } else if (block.every((l) => /^\d+\.\s/.test(l))) {
+      nodes.push({
         type: 'orderedList',
-        content: lines.map((l) => ({
+        content: block.map((l) => ({
           type: 'listItem',
           content: [{ type: 'paragraph', content: [{ type: 'text', text: l.replace(/^\d+\.\s+/, '') }] }]
         }))
       })
-      continue
+    } else {
+      // Regular block: one paragraph per line so Enter-key editing stays line-faithful
+      for (const line of block) {
+        nodes.push({ type: 'paragraph', content: [{ type: 'text', text: line }] })
+      }
     }
-
-    // Paragraph — preserve hard line breaks within the block
-    const inlineNodes: object[] = []
-    lines.forEach((line, i) => {
-      if (line) inlineNodes.push({ type: 'text', text: line })
-      if (i < lines.length - 1) inlineNodes.push({ type: 'hardBreak' })
-    })
-    content.push({ type: 'paragraph', content: inlineNodes })
+    block = []
   }
 
-  if (content.length === 0) content.push({ type: 'paragraph' })
-  return { type: 'doc', content }
+  for (const line of lines) {
+    if (line === '') {
+      flushBlock()
+      nodes.push({ type: 'paragraph' }) // blank line = empty paragraph
+    } else {
+      block.push(line)
+    }
+  }
+  flushBlock()
+
+  if (nodes.length === 0) nodes.push({ type: 'paragraph' })
+  return { type: 'doc', content: nodes }
 }
 
 /**
- * Walk the ProseMirror doc and serialize to plain text.
- * List items get their markers back; paragraphs are double-newline separated.
+ * Walk the ProseMirror doc and serialize back to plain text.
+ *
+ * List nodes are always written with a blank-line separator on each side so
+ * that buildTxtDoc can detect them on the next open. Without this, a toolbar-
+ * created bullet list saved as "New List:\n- item" would reload as plain text
+ * because the first line breaks the "all lines match list pattern" check.
+ *
+ * Rules:
+ *   paragraph   → one line (empty paragraph = blank line)
+ *   bulletList  → "- item\n- item\n..." surrounded by blank lines
+ *   orderedList → "1. item\n2. item\n..." surrounded by blank lines
+ *
+ * After building, collapse any 3+ consecutive newlines to 2 (one blank line)
+ * so double-empty-paragraph situations don't produce double blank lines.
  */
 function serializeTxt(editor: Editor): string {
-  const parts: string[] = []
+  type Chunk = { kind: 'list' | 'para'; text: string }
+  const chunks: Chunk[] = []
 
   editor.state.doc.forEach((node) => {
     if (node.type.name === 'bulletList') {
-      node.forEach((item) => parts.push(`- ${item.textContent}`))
-      parts.push('')
+      const items: string[] = []
+      node.forEach((item) => items.push(`- ${item.textContent}`))
+      chunks.push({ kind: 'list', text: items.join('\n') })
     } else if (node.type.name === 'orderedList') {
-      let i = (node.attrs.start as number) ?? 1
-      node.forEach((item) => { parts.push(`${i}. ${item.textContent}`); i++ })
-      parts.push('')
+      const items: string[] = []
+      let idx = (node.attrs.start as number) ?? 1
+      node.forEach((item) => { items.push(`${idx}. ${item.textContent}`); idx++ })
+      chunks.push({ kind: 'list', text: items.join('\n') })
     } else {
-      parts.push(node.textContent)
+      chunks.push({ kind: 'para', text: node.textContent })
     }
   })
 
-  return parts.join('\n').trimEnd() + '\n'
+  let out = ''
+  for (let i = 0; i < chunks.length; i++) {
+    const { kind, text } = chunks[i]
+    if (i === 0) { out = text; continue }
+    const prev = chunks[i - 1]
+    // Lists need a blank line before/after to survive a round-trip through buildTxtDoc.
+    // If the previous chunk was already an empty paragraph it has contributed one \n;
+    // we only need one more \n to make \n\n. Otherwise we need two \n's.
+    if (kind === 'list') {
+      out += prev.text === '' ? '\n' + text : '\n\n' + text
+    } else if (prev.kind === 'list') {
+      out += '\n\n' + text
+    } else {
+      out += '\n' + text
+    }
+  }
+
+  // Collapse 3+ newlines → 2 (prevents double blank lines when an empty paragraph
+  // sits adjacent to a list that already forced a blank-line separator).
+  return out.replace(/\n{3,}/g, '\n\n').trimStart() + '\n'
 }
 
 // ── Hook ─────────────────────────────────────────────────────────────────
@@ -191,7 +241,7 @@ export function useFile(editor: Editor | null): {
 
   const saveFileAs = useCallback(async () => {
     const content = getContent()
-    const result = await window.api.saveFileAs(content)
+    const result = await window.api.saveFileAs(content, useAppStore.getState().file.path ?? undefined)
     if (!result) return
     const fileType = detectFileType(result.path)
     setFile({ path: result.path, isDirty: false, fileType })
