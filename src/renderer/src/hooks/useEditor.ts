@@ -97,6 +97,12 @@ export function useEditor() {
       attributes: {
         class: 'prose prose-neutral dark:prose-invert max-w-none focus:outline-none'
       },
+      // In plain-text mode, strip HTML tags on paste so WYSIWYG stays honest
+      transformPastedHTML(html) {
+        const fileType = useAppStore.getState().file.fileType
+        if (fileType === 'txt') return html.replace(/<[^>]*>/g, '')
+        return html
+      },
       handleClick(view, _pos, event) {
         const target = event.target as HTMLElement
         const link = target.closest('a')

@@ -209,5 +209,5 @@ The **Format** submenu (Paragraph, H1–H4) in the right-click menu lets you cha
 
 ---
 
-*This file lives at \`~/Documents/Welcome to Lumina.md\` — feel free to edit or delete it. Happy writing!*
+*This file lives at \`~/Documents/Lumina/Welcome to Lumina.md\`. By default, Lumina saves new files to \`~/Documents/Lumina/\` — feel free to save anywhere you like. Happy writing!*
 `

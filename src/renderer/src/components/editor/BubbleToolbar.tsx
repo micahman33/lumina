@@ -77,7 +77,8 @@ export function BubbleToolbar({ editor, contextMenuOpen }: BubbleToolbarProps): 
     }
   }, [editor, updatePosition])
 
-  if (!rect || contextMenuOpen) return null
+  const fileType = useAppStore((s) => s.file.fileType)
+  if (!rect || contextMenuOpen || fileType === 'txt') return null
 
   const TOOLBAR_WIDTH = 220
   const left = Math.max(8, Math.min(rect.left + rect.width / 2 - TOOLBAR_WIDTH / 2, window.innerWidth - TOOLBAR_WIDTH - 8))

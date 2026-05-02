@@ -9,6 +9,8 @@ interface StatusBarProps {
 export function StatusBar({ editor }: StatusBarProps): JSX.Element {
   const filePath = useAppStore((s) => s.file.path)
   const isDirty = useAppStore((s) => s.file.isDirty)
+  const fileType = useAppStore((s) => s.file.fileType)
+  const formatLabel = fileType === 'txt' ? 'Plain Text' : 'Markdown'
   const [lineCol, setLineCol] = useState({ line: 1, col: 1 })
 
   useEffect(() => {
@@ -41,7 +43,7 @@ export function StatusBar({ editor }: StatusBarProps): JSX.Element {
         color: 'var(--lm-ink-faint)',
       }}
     >
-      <span>Markdown</span>
+      <span>{formatLabel}</span>
       <span>UTF-8</span>
       <span>Ln {lineCol.line}, Col {lineCol.col}</span>
 

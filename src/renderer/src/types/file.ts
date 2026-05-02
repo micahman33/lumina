@@ -1,3 +1,5 @@
+export type FileType = 'md' | 'txt'   // 'rtf' added in Phase 2
+
 export interface RecentFile {
   path: string
   name: string
@@ -9,6 +11,7 @@ export interface FileState {
   path: string | null
   content: string
   isDirty: boolean
+  fileType: FileType
 }
 
 export interface AppSettings {

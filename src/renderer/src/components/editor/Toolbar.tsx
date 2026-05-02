@@ -110,6 +110,8 @@ export function Toolbar({ editor, onOpenFile, onSaveFile, onInsertImage }: Toolb
   const toggleSidebar = useAppStore((s) => s.toggleSidebar)
   const setSettingsOpen = useAppStore((s) => s.setSettingsOpen)
   const setLinkDialogOpen = useAppStore((s) => s.setLinkDialogOpen)
+  const fileType = useAppStore((s) => s.file.fileType)
+  const isMd = fileType === 'md'
   const isMac = navigator.platform.toLowerCase().includes('mac')
   const mod = isMac ? '⌘' : 'Ctrl'
 
@@ -157,104 +159,116 @@ export function Toolbar({ editor, onOpenFile, onSaveFile, onInsertImage }: Toolb
 
       <Sep />
 
-      {/* Format dropdown */}
-      <Tooltip.Provider delayDuration={400}>
-        <Tooltip.Root>
-          <Tooltip.Trigger asChild>
-            <div>
-              <DropdownMenu.Root>
-                <DropdownMenu.Trigger asChild>
-                  <button
-                    className="titlebar-no-drag inline-flex items-center gap-2 rounded"
-                    style={{
-                      height: 28, minWidth: 124, padding: '0 10px',
-                      borderRadius: 6,
-                      border: '1px solid var(--lm-border)',
-                      background: 'rgba(0,0,0,0.015)',
-                      fontSize: 12.5, fontWeight: 500,
-                      color: 'var(--lm-ink-soft)',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <span style={{ flex: 1, textAlign: 'left' }}>{formatLabel}</span>
-                    <ChevronDown size={10} strokeWidth={1.5} style={{ color: 'var(--lm-ink-faint)', flexShrink: 0 }} />
-                  </button>
-                </DropdownMenu.Trigger>
-                <DropdownMenu.Portal>
-                  <DropdownMenu.Content
-                    className="z-50 rounded-xl shadow-xl py-1"
-                    style={{ background: 'var(--lm-chrome)', border: '1px solid var(--lm-border)', minWidth: 180 }}
-                    sideOffset={4}
-                  >
-                    {FORMAT_ITEMS.map(({ label, action, shortcut }) => (
-                      <DropdownMenu.Item
-                        key={label}
-                        onSelect={action}
-                        className="flex items-center justify-between px-4 outline-none cursor-pointer"
-                        style={{ padding: '7px 16px', fontSize: 13, color: 'var(--lm-ink)' }}
-                        onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(91,108,255,0.08)'}
-                        onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+      {/* Format dropdown — Markdown only */}
+      {isMd && (
+        <>
+          <Tooltip.Provider delayDuration={400}>
+            <Tooltip.Root>
+              <Tooltip.Trigger asChild>
+                <div>
+                  <DropdownMenu.Root>
+                    <DropdownMenu.Trigger asChild>
+                      <button
+                        className="titlebar-no-drag inline-flex items-center gap-2 rounded"
+                        style={{
+                          height: 28, minWidth: 124, padding: '0 10px',
+                          borderRadius: 6,
+                          border: '1px solid var(--lm-border)',
+                          background: 'rgba(0,0,0,0.015)',
+                          fontSize: 12.5, fontWeight: 500,
+                          color: 'var(--lm-ink-soft)',
+                          cursor: 'pointer',
+                        }}
                       >
-                        <span>{label}</span>
-                        <span style={{ fontSize: 11, color: 'var(--lm-ink-faint)', fontFamily: 'ui-monospace, monospace' }}>{shortcut}</span>
-                      </DropdownMenu.Item>
-                    ))}
-                  </DropdownMenu.Content>
-                </DropdownMenu.Portal>
-              </DropdownMenu.Root>
-            </div>
-          </Tooltip.Trigger>
-          <Tooltip.Portal>
-            <Tooltip.Content side="bottom" sideOffset={6}
-              className="z-50 rounded-md px-2 py-1 text-xs shadow-lg"
-              style={{ background: '#1F1F25', color: '#fff', fontSize: 11, fontWeight: 500 }}>
-              Format · paragraph or heading
-              <Tooltip.Arrow style={{ fill: '#1F1F25' }} />
-            </Tooltip.Content>
-          </Tooltip.Portal>
-        </Tooltip.Root>
-      </Tooltip.Provider>
+                        <span style={{ flex: 1, textAlign: 'left' }}>{formatLabel}</span>
+                        <ChevronDown size={10} strokeWidth={1.5} style={{ color: 'var(--lm-ink-faint)', flexShrink: 0 }} />
+                      </button>
+                    </DropdownMenu.Trigger>
+                    <DropdownMenu.Portal>
+                      <DropdownMenu.Content
+                        className="z-50 rounded-xl shadow-xl py-1"
+                        style={{ background: 'var(--lm-chrome)', border: '1px solid var(--lm-border)', minWidth: 180 }}
+                        sideOffset={4}
+                      >
+                        {FORMAT_ITEMS.map(({ label, action, shortcut }) => (
+                          <DropdownMenu.Item
+                            key={label}
+                            onSelect={action}
+                            className="flex items-center justify-between px-4 outline-none cursor-pointer"
+                            style={{ padding: '7px 16px', fontSize: 13, color: 'var(--lm-ink)' }}
+                            onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(91,108,255,0.08)'}
+                            onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                          >
+                            <span>{label}</span>
+                            <span style={{ fontSize: 11, color: 'var(--lm-ink-faint)', fontFamily: 'ui-monospace, monospace' }}>{shortcut}</span>
+                          </DropdownMenu.Item>
+                        ))}
+                      </DropdownMenu.Content>
+                    </DropdownMenu.Portal>
+                  </DropdownMenu.Root>
+                </div>
+              </Tooltip.Trigger>
+              <Tooltip.Portal>
+                <Tooltip.Content side="bottom" sideOffset={6}
+                  className="z-50 rounded-md px-2 py-1 text-xs shadow-lg"
+                  style={{ background: '#1F1F25', color: '#fff', fontSize: 11, fontWeight: 500 }}>
+                  Format · paragraph or heading
+                  <Tooltip.Arrow style={{ fill: '#1F1F25' }} />
+                </Tooltip.Content>
+              </Tooltip.Portal>
+            </Tooltip.Root>
+          </Tooltip.Provider>
+          <Sep />
+        </>
+      )}
 
-      <Sep />
+      {/* Inline formatting — Markdown only */}
+      {isMd && (
+        <>
+          <TB label={`Bold · ${mod}B`} active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}><Bold size={15} strokeWidth={1.6} /></TB>
+          <TB label={`Italic · ${mod}I`} active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()}><Italic size={15} strokeWidth={1.6} /></TB>
+          <TB label="Strikethrough" active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()}><Strikethrough size={15} strokeWidth={1.6} /></TB>
+          <TB label="Inline code" active={editor.isActive('code')} onClick={() => editor.chain().focus().toggleCode().run()}><Code size={15} strokeWidth={1.6} /></TB>
+          <Sep />
+        </>
+      )}
 
-      {/* Inline formatting */}
-      <TB label={`Bold · ${mod}B`} active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}><Bold size={15} strokeWidth={1.6} /></TB>
-      <TB label={`Italic · ${mod}I`} active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()}><Italic size={15} strokeWidth={1.6} /></TB>
-      <TB label="Strikethrough" active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()}><Strikethrough size={15} strokeWidth={1.6} /></TB>
-      <TB label="Inline code" active={editor.isActive('code')} onClick={() => editor.chain().focus().toggleCode().run()}><Code size={15} strokeWidth={1.6} /></TB>
-
-      <Sep />
-
-      {/* Lists */}
+      {/* Lists — both modes */}
       <TB label="Bullet list" active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()}><List size={15} strokeWidth={1.6} /></TB>
       <TB label="Numbered list" active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}><ListOrdered size={15} strokeWidth={1.6} /></TB>
-      <TB label="Task list" active={editor.isActive('taskList')} onClick={() => editor.chain().focus().toggleTaskList().run()}><ListTodo size={15} strokeWidth={1.6} /></TB>
+      {isMd && <TB label="Task list" active={editor.isActive('taskList')} onClick={() => editor.chain().focus().toggleTaskList().run()}><ListTodo size={15} strokeWidth={1.6} /></TB>}
 
-      <Sep />
+      {/* Blocks — Markdown only */}
+      {isMd && (
+        <>
+          <Sep />
+          <TB label={`Blockquote · ${mod}⇧.`} active={editor.isActive('blockquote')} onClick={() => editor.chain().focus().toggleBlockquote().run()}><Quote size={15} strokeWidth={1.6} /></TB>
+          <TB label="Code block" active={editor.isActive('codeBlock')} onClick={() => editor.chain().focus().toggleCodeBlock().run()}><Code2 size={15} strokeWidth={1.6} /></TB>
+          <TB label="Horizontal rule" onClick={() => editor.chain().focus().setHorizontalRule().run()}><Minus size={15} strokeWidth={1.6} /></TB>
+        </>
+      )}
 
-      {/* Blocks */}
-      <TB label={`Blockquote · ${mod}⇧.`} active={editor.isActive('blockquote')} onClick={() => editor.chain().focus().toggleBlockquote().run()}><Quote size={15} strokeWidth={1.6} /></TB>
-      <TB label="Code block" active={editor.isActive('codeBlock')} onClick={() => editor.chain().focus().toggleCodeBlock().run()}><Code2 size={15} strokeWidth={1.6} /></TB>
-      <TB label="Horizontal rule" onClick={() => editor.chain().focus().setHorizontalRule().run()}><Minus size={15} strokeWidth={1.6} /></TB>
-
-      <Sep />
-
-      {/* Insert */}
-      <TB label={`Link · ${mod}K`} active={editor.isActive('link')} onClick={() => setLinkDialogOpen(true)}><Link2 size={15} strokeWidth={1.6} /></TB>
-      <TableWizard editor={editor}>
-        <Tip label="Insert table">
-          <button
-            className="titlebar-no-drag inline-flex items-center justify-center rounded transition-colors duration-100"
-            style={{ width: 28, height: 28, borderRadius: 6, background: 'transparent', border: 'none', color: 'var(--lm-ink-soft)', cursor: 'pointer' }}
-            onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.04)'}
-            onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-            aria-label="Insert table"
-          >
-            <Table size={15} strokeWidth={1.6} />
-          </button>
-        </Tip>
-      </TableWizard>
-      <TB label="Insert image" onClick={onInsertImage}><Image size={15} strokeWidth={1.6} /></TB>
+      {/* Insert — Markdown only */}
+      {isMd && (
+        <>
+          <Sep />
+          <TB label={`Link · ${mod}K`} active={editor.isActive('link')} onClick={() => setLinkDialogOpen(true)}><Link2 size={15} strokeWidth={1.6} /></TB>
+          <TableWizard editor={editor}>
+            <Tip label="Insert table">
+              <button
+                className="titlebar-no-drag inline-flex items-center justify-center rounded transition-colors duration-100"
+                style={{ width: 28, height: 28, borderRadius: 6, background: 'transparent', border: 'none', color: 'var(--lm-ink-soft)', cursor: 'pointer' }}
+                onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.04)'}
+                onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                aria-label="Insert table"
+              >
+                <Table size={15} strokeWidth={1.6} />
+              </button>
+            </Tip>
+          </TableWizard>
+          <TB label="Insert image" onClick={onInsertImage}><Image size={15} strokeWidth={1.6} /></TB>
+        </>
+      )}
 
       {/* Spacer */}
       <div style={{ flex: 1 }} />

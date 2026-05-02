@@ -49,7 +49,11 @@ export function buildMenu(win: BrowserWindow): void {
           click: async () => {
             const { dialog } = await import('electron')
             const result = await dialog.showOpenDialog(win, {
-              filters: [{ name: 'Markdown', extensions: ['md', 'markdown', 'txt'] }],
+              filters: [
+                { name: 'All Supported', extensions: ['md', 'markdown', 'txt'] },
+                { name: 'Markdown', extensions: ['md', 'markdown'] },
+                { name: 'Plain Text', extensions: ['txt'] },
+              ],
               properties: ['openFile']
             })
             if (!result.canceled && result.filePaths[0]) {

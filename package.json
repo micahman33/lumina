@@ -90,9 +90,17 @@
     },
     "fileAssociations": [
       {
-        "ext": "md",
+        "ext": ["md", "markdown"],
         "name": "Markdown Document",
         "description": "Markdown Document",
+        "mimeType": "text/markdown",
+        "role": "Editor"
+      },
+      {
+        "ext": "txt",
+        "name": "Plain Text Document",
+        "description": "Plain Text Document",
+        "mimeType": "text/plain",
         "role": "Editor"
       }
     ]

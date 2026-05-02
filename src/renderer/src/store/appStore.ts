@@ -22,7 +22,7 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set) => ({
-  file: { path: null, content: '', isDirty: false },
+  file: { path: null, content: '', isDirty: false, fileType: 'md' },
   theme: 'system',
   sidebarOpen: true,
   recentFiles: [],

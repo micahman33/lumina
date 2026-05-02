@@ -1,16 +1,33 @@
 import { ipcMain, dialog, BrowserWindow, app } from 'electron'
-import { readFile, writeFile } from 'fs/promises'
+import { readFile, writeFile, mkdir } from 'fs/promises'
 import { basename, join } from 'path'
 import { IPC } from '../../renderer/src/types/ipc'
 import store from '../store'
 import { WELCOME_CONTENT } from '../welcome'
 import type { OpenFileResult, RecentFile } from '../../renderer/src/types/file'
 
+/** ~/Documents/Lumina — default home for all Lumina files */
+export function luminaDir(): string {
+  return join(app.getPath('documents'), 'Lumina')
+}
+
+async function ensureLuminaDir(): Promise<void> {
+  await mkdir(luminaDir(), { recursive: true })
+}
+
 export function registerFileHandlers(): void {
+  // Ensure ~/Documents/Lumina exists at startup
+  ensureLuminaDir().catch(() => {/* non-fatal */})
+
   ipcMain.handle(IPC.FILE_OPEN, async (): Promise<OpenFileResult | null> => {
     const win = BrowserWindow.getFocusedWindow()
     const result = await dialog.showOpenDialog(win!, {
-      filters: [{ name: 'Markdown', extensions: ['md', 'markdown', 'txt'] }],
+      defaultPath: luminaDir(),
+      filters: [
+        { name: 'All Supported', extensions: ['md', 'markdown', 'txt'] },
+        { name: 'Markdown', extensions: ['md', 'markdown'] },
+        { name: 'Plain Text', extensions: ['txt'] },
+      ],
       properties: ['openFile']
     })
     if (result.canceled || !result.filePaths[0]) return null
@@ -42,8 +59,11 @@ export function registerFileHandlers(): void {
   ipcMain.handle(IPC.FILE_SAVE_AS, async (_, content: string) => {
     const win = BrowserWindow.getFocusedWindow()
     const result = await dialog.showSaveDialog(win!, {
-      filters: [{ name: 'Markdown', extensions: ['md'] }],
-      defaultPath: 'untitled.md'
+      defaultPath: join(luminaDir(), 'untitled.md'),
+      filters: [
+        { name: 'Markdown', extensions: ['md'] },
+        { name: 'Plain Text', extensions: ['txt'] },
+      ],
     })
     if (result.canceled || !result.filePath) return null
     await writeFile(result.filePath, content, 'utf8')
@@ -52,45 +72,41 @@ export function registerFileHandlers(): void {
 
   ipcMain.handle(IPC.FILE_READ_INITIAL, async (): Promise<OpenFileResult | null> => {
     // 1. CLI / Open With argument takes highest priority
-    const mdArg = process.argv.find((a) => a.endsWith('.md') || a.endsWith('.markdown'))
-    if (mdArg) {
+    const fileArg = process.argv.find((a) =>
+      /\.(md|markdown|txt)$/i.test(a) && !a.startsWith('-')
+    )
+    if (fileArg) {
       try {
-        const raw = await readFile(mdArg, 'utf8')
+        const raw = await readFile(fileArg, 'utf8')
         const content = raw.startsWith('﻿') ? raw.slice(1) : raw
-        // Bump to top of recents
-        const existing = store.get('recentFiles').filter((f) => f.path !== mdArg)
+        const existing = store.get('recentFiles').filter((f) => f.path !== fileArg)
         store.set('recentFiles', [
-          { path: mdArg, name: basename(mdArg), lastOpened: new Date().toISOString() },
+          { path: fileArg, name: basename(fileArg), lastOpened: new Date().toISOString() },
           ...existing
         ].slice(0, 20))
-        return { path: mdArg, content }
+        return { path: fileArg, content }
       } catch {
         return null
       }
     }
 
-    // 2. Reopen the most recent file (skipping any that no longer exist on disk)
+    // 2. Reopen the most recent file that still exists on disk
     const recents = store.get('recentFiles')
     for (const recent of recents) {
       try {
         const raw = await readFile(recent.path, 'utf8')
         const content = raw.startsWith('﻿') ? raw.slice(1) : raw
-        // Update lastOpened
         const rest = recents.filter((f) => f.path !== recent.path)
-        store.set('recentFiles', [
-          { ...recent, lastOpened: new Date().toISOString() },
-          ...rest
-        ])
+        store.set('recentFiles', [{ ...recent, lastOpened: new Date().toISOString() }, ...rest])
         return { path: recent.path, content }
-      } catch {
-        // File missing — try next
-      }
+      } catch { /* file missing, try next */ }
     }
 
-    // 3. No recents → write and open the welcome document on first launch
+    // 3. First-ever launch → create Lumina folder + welcome doc
     const settings = store.get('settings')
-    const welcomePath = join(app.getPath('documents'), 'Welcome to Lumina.md')
     if (!settings.welcomeShown) {
+      await ensureLuminaDir()
+      const welcomePath = join(luminaDir(), 'Welcome to Lumina.md')
       try {
         await writeFile(welcomePath, WELCOME_CONTENT, 'utf8')
         store.set('settings', { ...settings, welcomeShown: true })
