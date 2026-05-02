@@ -34,7 +34,7 @@ Open any `.md` file and it just works. The cursor sits where you see it. Heading
 | Platform | Installer | Notes |
 |---|---|---|
 | macOS (Apple Silicon) | [Lumina-1.1.0-arm64.dmg](https://github.com/micahman33/lumina/releases/download/v1.1.0/Lumina-1.1.0-arm64.dmg) | M1/M2/M3/M4 Macs |
-| Windows (x64) | [Lumina-Setup-1.1.0.exe](https://github.com/micahman33/lumina/releases/download/v1.1.0/Lumina%20Setup%201.1.0.exe) | Windows 10/11 |
+| Windows (x64) | [Lumina Setup 1.1.0.exe](https://github.com/micahman33/lumina/releases/download/v1.1.0/Lumina.Setup.1.1.0.exe) | Windows 10/11 |
 
 ### macOS Installation
 
@@ -46,7 +46,7 @@ Open any `.md` file and it just works. The cursor sits where you see it. Heading
 
 ### Windows Installation
 
-1. Download and run `Lumina Setup 1.1.0.exe`
+1. Download and run `Lumina.Setup.1.1.0.exe`
 2. Follow the installer — Lumina will be added to your Start Menu and Desktop
 
 ---
