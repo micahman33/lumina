@@ -1,8 +1,16 @@
-export const WELCOME_CONTENT = `# Welcome to Lumina ✦
+export const WELCOME_CONTENT = `# Welcome to Lumina
 
-Lumina is a **WYSIWYG Markdown editor** — what you type is what you get, and every document is a plain \`.md\` file you can open anywhere.
+*A lightweight, elegant editor for the documents you actually want to read.*
 
-Every feature in this document can be created two ways: **by typing Markdown syntax directly**, or **through the UI** — toolbar buttons, keyboard shortcuts, and the right-click menu. Both paths produce identical output. Use whichever feels natural.
+Just write. Lumina is a WYSIWYG Markdown editor for macOS and Windows. Format what you mean — the Markdown is written for you, behind the glass.
+
+Open any \`.md\` file and it just works. The cursor sits where you see it. Headings look like headings.
+
+> *The best tool is the one you forget you're using.*
+
+---
+
+Every feature below can be created two ways: **by typing Markdown syntax directly**, or **through the UI** — toolbar buttons, keyboard shortcuts, and the right-click menu. Both produce identical output.
 
 ---
 

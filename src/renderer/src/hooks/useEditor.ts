@@ -1,15 +1,20 @@
 import { useEditor as useTiptapEditor, ReactNodeViewRenderer } from '@tiptap/react'
 import { Extension } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
-import CodeBlock from '@tiptap/extension-code-block'
+import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight'
+import { createLowlight, common } from 'lowlight'
 import { CodeBlockView } from '../components/editor/CodeBlockView'
 
-// CodeBlock extended with a React NodeView for the language picker pill
-const CodeBlockWithPicker = CodeBlock.extend({
+const lowlight = createLowlight(common)
+
+// CodeBlockLowlight gives us syntax highlighting; NodeView adds the language picker pill.
+// defaultLanguage: 'plaintext' prevents lowlight from auto-detecting when no language is set,
+// so plain-text blocks stay unstyled instead of getting random token colours.
+const CodeBlockWithPicker = CodeBlockLowlight.extend({
   addNodeView() {
     return ReactNodeViewRenderer(CodeBlockView)
   }
-})
+}).configure({ lowlight, defaultLanguage: 'plaintext' })
 import { Image } from '@tiptap/extension-image'
 import { Link } from '@tiptap/extension-link'
 import { Table } from '@tiptap/extension-table'
@@ -76,8 +81,12 @@ export function useEditor() {
       LinkShortcut
     ],
     content: '',
+    onCreate: ({ editor: e }) => {
+      // Initialise storage so the toolbar never reads undefined
+      e.storage.wordCount = 0
+    },
     onUpdate: ({ editor: e }) => {
-      // Update word count storage
+      // Update word count on every content change (including setContent calls)
       const text = e.getText()
       const words = text.trim() ? text.trim().split(/\s+/).length : 0
       e.storage.wordCount = words

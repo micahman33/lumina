@@ -2,6 +2,20 @@ import { useCallback, useEffect } from 'react'
 import { useAppStore } from '../store/appStore'
 import type { Editor } from '@tiptap/react'
 
+/** Strip Markdown syntax to produce a plain-text snippet for search indexing. */
+function extractSnippet(markdown: string, maxLen = 300): string {
+  return markdown
+    .replace(/^#{1,6}\s+/gm, '')               // headings
+    .replace(/\*\*(.+?)\*\*/g, '$1')            // bold
+    .replace(/\*(.+?)\*/g, '$1')                // italic
+    .replace(/`{1,3}[^`\n]*`{1,3}/g, '')        // inline / fenced code
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')    // links → label only
+    .replace(/^\s*[-*+>]\s+/gm, '')             // list/blockquote markers
+    .replace(/\n+/g, ' ')
+    .trim()
+    .slice(0, maxLen)
+}
+
 export function useFile(editor: Editor | null): {
   openFile: () => Promise<void>
   saveFile: () => Promise<void>
@@ -13,6 +27,29 @@ export function useFile(editor: Editor | null): {
   const markDirty = useAppStore((s) => s.markDirty)
   const setRecentFiles = useAppStore((s) => s.setRecentFiles)
   const filePath = useAppStore((s) => s.file.path)
+
+  /**
+   * Record a file in the main-process recents store and update the sidebar list
+   * without reordering entries that are already visible — new files go to the top,
+   * existing files stay at their current position (order only resets on next launch).
+   */
+  const stableAddRecent = useCallback(
+    async (path: string, snippet?: string) => {
+      await window.api.addRecentFile(path, snippet)
+      const current = useAppStore.getState().recentFiles
+      const exists = current.some((f) => f.path === path)
+      if (!exists) {
+        // Brand-new file — prepend it so it appears immediately
+        const name = path.split(/[/\\]/).pop() ?? path
+        setRecentFiles([
+          { path, name, lastOpened: new Date().toISOString(), snippet },
+          ...current,
+        ].slice(0, 20))
+      }
+      // Already in list — leave order alone; main process has recorded the open
+    },
+    [setRecentFiles]
+  )
 
   const loadContent = useCallback(
     (content: string) => {
@@ -29,12 +66,10 @@ export function useFile(editor: Editor | null): {
       if (!result) return
       setFile({ path: result.path, content: result.content, isDirty: false })
       loadContent(result.content)
-      await window.api.addRecentFile(result.path)
-      const recents = await window.api.getRecentFiles()
-      setRecentFiles(recents)
+      await stableAddRecent(result.path, extractSnippet(result.content))
       document.title = `${result.path.split(/[/\\]/).pop()} — Lumina`
     },
-    [setFile, loadContent, setRecentFiles]
+    [setFile, loadContent, stableAddRecent]
   )
 
   const newFile = useCallback(() => {
@@ -48,11 +83,9 @@ export function useFile(editor: Editor | null): {
     if (!result) return
     setFile({ path: result.path, content: result.content, isDirty: false })
     loadContent(result.content)
-    await window.api.addRecentFile(result.path)
-    const recents = await window.api.getRecentFiles()
-    setRecentFiles(recents)
+    await stableAddRecent(result.path, extractSnippet(result.content))
     document.title = `${result.path.split(/[/\\]/).pop()} — Lumina`
-  }, [setFile, loadContent, setRecentFiles])
+  }, [setFile, loadContent, stableAddRecent])
 
   const getMarkdown = useCallback((): string => {
     if (!editor) return ''
@@ -81,11 +114,9 @@ export function useFile(editor: Editor | null): {
     setFile({ path: result.path, isDirty: false })
     markDirty(false)
     ;(window as Window & { __lumina_isDirty__?: boolean }).__lumina_isDirty__ = false
-    await window.api.addRecentFile(result.path)
-    const recents = await window.api.getRecentFiles()
-    setRecentFiles(recents)
+    await stableAddRecent(result.path, extractSnippet(content))
     document.title = `${result.path.split(/[/\\]/).pop()} — Lumina`
-  }, [getMarkdown, setFile, markDirty, setRecentFiles])
+  }, [getMarkdown, setFile, markDirty, stableAddRecent])
 
   // Listen for menu-triggered open/save
   useEffect(() => {
@@ -103,13 +134,17 @@ export function useFile(editor: Editor | null): {
     }
   }, [saveFile, openFilePath, newFile])
 
-  // Load initial file (CLI open-with)
+  // Load initial file (CLI open-with or most recent)
   useEffect(() => {
-    window.api.readInitialFile().then((result) => {
+    window.api.readInitialFile().then(async (result) => {
       if (!result) return
       setFile({ path: result.path, content: result.content, isDirty: false })
       loadContent(result.content)
       document.title = `${result.path.split(/[/\\]/).pop()} — Lumina`
+      // Store snippet so this file is searchable from the sidebar
+      await window.api.addRecentFile(result.path, extractSnippet(result.content))
+      const recents = await window.api.getRecentFiles()
+      setRecentFiles(recents)
     })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 

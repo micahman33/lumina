@@ -4,10 +4,7 @@
 
 <h1 align="center">Lumina</h1>
 
-<p align="center">
-  A beautiful, distraction-free WYSIWYG Markdown editor for macOS and Windows.<br/>
-  Write naturally. Save as plain <code>.md</code>. Open anywhere.
-</p>
+<p align="center"><em>A lightweight, elegant editor for the documents you actually want to read.</em></p>
 
 <p align="center">
   <a href="https://github.com/micahman33/lumina/releases/latest">
@@ -22,11 +19,13 @@
 
 ---
 
-## What is Lumina?
+**Just write.**
 
-Lumina is a **WYSIWYG (What You See Is What You Get) Markdown editor** — you see formatted text as you write, not raw syntax. Under the hood, every document is a standard `.md` file that opens perfectly in any other Markdown tool, Git repository, or text editor.
+Lumina is a WYSIWYG Markdown editor for macOS and Windows. Format what you mean — the Markdown is written for you, behind the glass.
 
-No cloud lock-in. No proprietary format. Just beautiful writing and clean files.
+Open any `.md` file and it just works. The cursor sits where you see it. Headings look like headings.
+
+*The best tool is the one you forget you're using.*
 
 ---
 
@@ -34,8 +33,8 @@ No cloud lock-in. No proprietary format. Just beautiful writing and clean files.
 
 | Platform | Installer | Notes |
 |---|---|---|
-| macOS (Apple Silicon) | [Lumina-1.0.0-arm64.dmg](https://github.com/micahman33/lumina/releases/download/v1.0.0/Lumina-1.0.0-arm64.dmg) | M1/M2/M3/M4 Macs |
-| Windows (x64) | [Lumina-Setup-1.0.0.exe](https://github.com/micahman33/lumina/releases/download/v1.0.0/Lumina-Setup-1.0.0.exe) | Windows 10/11 |
+| macOS (Apple Silicon) | [Lumina-1.1.0-arm64.dmg](https://github.com/micahman33/lumina/releases/download/v1.1.0/Lumina-1.1.0-arm64.dmg) | M1/M2/M3/M4 Macs |
+| Windows (x64) | [Lumina-Setup-1.1.0.exe](https://github.com/micahman33/lumina/releases/download/v1.1.0/Lumina%20Setup%201.1.0.exe) | Windows 10/11 |
 
 ### macOS Installation
 
@@ -47,8 +46,41 @@ No cloud lock-in. No proprietary format. Just beautiful writing and clean files.
 
 ### Windows Installation
 
-1. Download and run `Lumina-Setup-1.0.0.exe`
+1. Download and run `Lumina Setup 1.1.0.exe`
 2. Follow the installer — Lumina will be added to your Start Menu and Desktop
+
+---
+
+## What's New
+
+### v1.1.0
+
+**UI & Design**
+- Redesigned toolbar with logical clusters, Undo/Redo buttons, and a Format dropdown (Paragraph, H1–H4) that reflects whatever your cursor is on
+- Toolbar formatting buttons (Bold, Italic, lists, blocks) now stay in sync with cursor position in real time
+- Refined typography: Inter Tight font, wider content column, indigo accent color throughout, improved heading scale
+- Code blocks are now theme-aware — light gray background in light mode, dark in dark mode
+- Status bar shows live line/column position, file encoding, and a color-coded saved/unsaved indicator
+
+**Code Blocks**
+- Language picker pill in the top-right corner of every code block — click to choose from 25 languages
+- Full syntax highlighting powered by lowlight/highlight.js (GitHub-style light theme, GitHub Dark in dark mode)
+- Plain Text mode correctly disables all highlighting (no more auto-detection coloring)
+
+**Sidebar**
+- Search now searches document *content*, not just filenames — shows a text excerpt around the match
+- Recent files list no longer reorders while the app is open; order only updates on next launch
+- New File button, relative timestamps ("2 hours ago"), active file indicator, and current folder footer
+
+**File Handling**
+- On launch, Lumina automatically reopens your most recently edited file
+- If no previous files exist, the welcome guide opens instead
+- Opening a file from Finder/Explorer always takes priority
+
+**Bug Fixes**
+- Word count now reflects the correct count immediately on file open (was showing 0 until first edit)
+- Fixed Windows title bar showing full file path instead of filename
+- Sidebar search index is populated on first open, so files are searchable immediately
 
 ---
 
@@ -140,6 +172,7 @@ No cloud lock-in. No proprietary format. Just beautiful writing and clean files.
 | Build tool | [electron-vite 5](https://electron-vite.org) |
 | UI framework | [React 18](https://react.dev) + TypeScript |
 | Editor engine | [TipTap v3](https://tiptap.dev) (ProseMirror) |
+| Syntax highlighting | [lowlight](https://github.com/wooorm/lowlight) (highlight.js tokens) |
 | Markdown I/O | [tiptap-markdown](https://github.com/aguingand/tiptap-markdown) |
 | Styling | [Tailwind CSS v3](https://tailwindcss.com) + [@tailwindcss/typography](https://tailwindcss.com/docs/typography-plugin) |
 | State management | [Zustand 5](https://zustand-demo.pmnd.rs) |

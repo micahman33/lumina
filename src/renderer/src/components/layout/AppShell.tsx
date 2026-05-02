@@ -9,14 +9,15 @@ interface AppShellProps {
   onOpenFile: () => void
   onSaveFile: () => void
   onOpenFilePath: (path: string) => void
+  onNewFile: () => void
 }
 
-export function AppShell({ editor, onOpenFile, onSaveFile, onOpenFilePath }: AppShellProps): JSX.Element {
+export function AppShell({ editor, onOpenFile, onSaveFile, onOpenFilePath, onNewFile }: AppShellProps): JSX.Element {
   return (
-    <div className="flex flex-col h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
+    <div className="flex flex-col h-screen lm-ink" style={{ background: 'var(--lm-bg)' }}>
       <TitleBar />
       <div className="flex flex-1 min-h-0">
-        <Sidebar onOpenFile={onOpenFilePath} />
+        <Sidebar onOpenFile={onOpenFilePath} onNewFile={onNewFile} />
         <EditorPane editor={editor} onOpenFile={onOpenFile} onSaveFile={onSaveFile} />
       </div>
       <SettingsModal />

@@ -7,20 +7,13 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: [
-          '-apple-system',
-          'BlinkMacSystemFont',
-          'Segoe UI',
-          'Roboto',
-          'Helvetica Neue',
-          'Arial',
-          'sans-serif'
-        ]
+        sans: ['"Inter Tight"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
+        mono: ['ui-monospace', 'SFMono-Regular', '"SF Mono"', 'Menlo', 'monospace'],
       },
       colors: {
-        surface: {
-          DEFAULT: '#ffffff',
-          dark: '#1e1e1e'
+        lumina: {
+          indigo: '#3B4BD8',
+          soft: '#5B6CFF',
         }
       }
     }

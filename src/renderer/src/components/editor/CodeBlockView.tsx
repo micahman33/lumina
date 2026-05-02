@@ -3,7 +3,7 @@ import { NodeViewContent, NodeViewWrapper } from '@tiptap/react'
 import type { NodeViewProps } from '@tiptap/core'
 
 const LANGUAGES = [
-  { label: 'Plain Text',   value: '' },
+  { label: 'Plain Text',   value: 'plaintext' },
   { label: 'Bash',         value: 'bash' },
   { label: 'C',            value: 'c' },
   { label: 'C++',          value: 'cpp' },
@@ -36,7 +36,7 @@ export function CodeBlockView({ node, updateAttributes }: NodeViewProps): JSX.El
   const language = (node.attrs.language as string) || ''
   const displayLabel =
     LANGUAGES.find((l) => l.value === language)?.label ??
-    (language || 'plain text')
+    (language || 'Plain Text')
 
   // Close picker when clicking outside
   useEffect(() => {
@@ -53,7 +53,9 @@ export function CodeBlockView({ node, updateAttributes }: NodeViewProps): JSX.El
   return (
     <NodeViewWrapper
       as="div"
-      className="relative my-4 rounded-xl overflow-visible bg-gray-900 dark:bg-gray-950 border border-gray-700 dark:border-gray-800"
+      className="relative my-4 rounded-xl overflow-visible
+        bg-[#f3f4f6] border border-[#e5e7eb]
+        dark:bg-gray-900 dark:border-gray-700"
     >
       {/* Language pill — not editable */}
       <div
@@ -68,9 +70,8 @@ export function CodeBlockView({ node, updateAttributes }: NodeViewProps): JSX.El
             setPickerOpen((v) => !v)
           }}
           className="text-[11px] leading-none px-2 py-1 rounded-md font-mono
-            bg-gray-700 dark:bg-gray-800
-            text-gray-400 hover:text-gray-100
-            hover:bg-gray-600 dark:hover:bg-gray-700
+            bg-[#e5e7eb] text-[#6b7280] hover:bg-[#d1d5db] hover:text-[#374151]
+            dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 dark:hover:text-gray-100
             transition-colors cursor-pointer"
         >
           {displayLabel}
@@ -79,8 +80,8 @@ export function CodeBlockView({ node, updateAttributes }: NodeViewProps): JSX.El
         {/* Dropdown */}
         {pickerOpen && (
           <div className="absolute right-0 top-full mt-1.5 w-44 max-h-56 overflow-y-auto
-            bg-gray-800 dark:bg-gray-900
-            border border-gray-600 dark:border-gray-700
+            bg-white border border-[#e5e7eb]
+            dark:bg-gray-800 dark:border-gray-600
             rounded-xl shadow-2xl py-1 z-50">
             {LANGUAGES.map((lang) => (
               <button
@@ -92,8 +93,8 @@ export function CodeBlockView({ node, updateAttributes }: NodeViewProps): JSX.El
                 }}
                 className={`w-full text-left px-3 py-1.5 text-xs font-mono transition-colors ${
                   lang.value === language
-                    ? 'text-blue-400 bg-gray-700 dark:bg-gray-800'
-                    : 'text-gray-300 hover:bg-gray-700 dark:hover:bg-gray-800 hover:text-white'
+                    ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-gray-700'
+                    : 'text-[#374151] hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white'
                 }`}
               >
                 {lang.label}
@@ -107,7 +108,7 @@ export function CodeBlockView({ node, updateAttributes }: NodeViewProps): JSX.El
       <pre className="m-0 p-4 pt-9 overflow-x-auto bg-transparent rounded-xl">
         <NodeViewContent
           as="code"
-          className={`font-mono text-sm text-gray-100 whitespace-pre${language ? ` language-${language}` : ''}`}
+          className={`font-mono text-sm text-[#1f2937] dark:text-gray-100 whitespace-pre${language ? ` language-${language}` : ''}`}
         />
       </pre>
     </NodeViewWrapper>

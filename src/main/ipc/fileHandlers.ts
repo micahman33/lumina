@@ -51,35 +51,54 @@ export function registerFileHandlers(): void {
   })
 
   ipcMain.handle(IPC.FILE_READ_INITIAL, async (): Promise<OpenFileResult | null> => {
-    // 1. Honour CLI / Open With argument first
-    const args = process.argv
-    const mdArg = args.find((a) => a.endsWith('.md') || a.endsWith('.markdown'))
+    // 1. CLI / Open With argument takes highest priority
+    const mdArg = process.argv.find((a) => a.endsWith('.md') || a.endsWith('.markdown'))
     if (mdArg) {
       try {
         const raw = await readFile(mdArg, 'utf8')
         const content = raw.startsWith('﻿') ? raw.slice(1) : raw
+        // Bump to top of recents
+        const existing = store.get('recentFiles').filter((f) => f.path !== mdArg)
+        store.set('recentFiles', [
+          { path: mdArg, name: basename(mdArg), lastOpened: new Date().toISOString() },
+          ...existing
+        ].slice(0, 20))
         return { path: mdArg, content }
       } catch {
         return null
       }
     }
 
-    // 2. First-ever launch → write and open the welcome document
+    // 2. Reopen the most recent file (skipping any that no longer exist on disk)
+    const recents = store.get('recentFiles')
+    for (const recent of recents) {
+      try {
+        const raw = await readFile(recent.path, 'utf8')
+        const content = raw.startsWith('﻿') ? raw.slice(1) : raw
+        // Update lastOpened
+        const rest = recents.filter((f) => f.path !== recent.path)
+        store.set('recentFiles', [
+          { ...recent, lastOpened: new Date().toISOString() },
+          ...rest
+        ])
+        return { path: recent.path, content }
+      } catch {
+        // File missing — try next
+      }
+    }
+
+    // 3. No recents → write and open the welcome document on first launch
     const settings = store.get('settings')
+    const welcomePath = join(app.getPath('documents'), 'Welcome to Lumina.md')
     if (!settings.welcomeShown) {
-      const welcomePath = join(app.getPath('documents'), 'Welcome to Lumina.md')
       try {
         await writeFile(welcomePath, WELCOME_CONTENT, 'utf8')
         store.set('settings', { ...settings, welcomeShown: true })
-        // Add to recent files
-        const existing = store.get('recentFiles').filter((f) => f.path !== welcomePath)
         store.set('recentFiles', [
-          { path: welcomePath, name: 'Welcome to Lumina.md', lastOpened: new Date().toISOString() },
-          ...existing
-        ].slice(0, 20))
+          { path: welcomePath, name: 'Welcome to Lumina.md', lastOpened: new Date().toISOString() }
+        ])
         return { path: welcomePath, content: WELCOME_CONTENT }
       } catch {
-        // If Documents isn't writable, just show the content without a path
         store.set('settings', { ...settings, welcomeShown: true })
       }
     }
@@ -91,13 +110,12 @@ export function registerFileHandlers(): void {
     return store.get('recentFiles')
   })
 
-  ipcMain.handle(IPC.RECENT_ADD, (_, path: string): void => {
+  ipcMain.handle(IPC.RECENT_ADD, (_, path: string, snippet?: string): void => {
     const name = basename(path)
     const existing = store.get('recentFiles').filter((f) => f.path !== path)
-    const updated: RecentFile[] = [
-      { path, name, lastOpened: new Date().toISOString() },
-      ...existing
-    ].slice(0, 20)
+    const entry: RecentFile = { path, name, lastOpened: new Date().toISOString() }
+    if (snippet) entry.snippet = snippet
+    const updated: RecentFile[] = [entry, ...existing].slice(0, 20)
     store.set('recentFiles', updated)
   })
 

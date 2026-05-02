@@ -85,7 +85,7 @@ export function EditorCore({ editor, insertImageRef }: EditorCoreProps): JSX.Ele
 
   return (
     <div
-      className="flex-1 overflow-y-auto bg-white dark:bg-gray-950 relative"
+      className="flex-1 overflow-y-auto relative lm-bg"
       onDrop={handleDrop}
       onDragOver={(e) => e.preventDefault()}
       onContextMenu={handleContextMenu}

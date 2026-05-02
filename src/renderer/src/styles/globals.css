@@ -16,13 +16,6 @@ body,
   overflow: hidden;
 }
 
-/* TipTap editor area */
-.ProseMirror {
-  outline: none;
-  min-height: 100%;
-  padding: 2rem 3rem;
-}
-
 .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   color: #9ca3af;
@@ -129,10 +122,7 @@ body,
   color: #9ca3af;
 }
 
-/* Selection */
-.ProseMirror ::selection {
-  background: rgba(59, 130, 246, 0.25);
-}
+/* (selection rule moved to design token section below) */
 
 /* App drag region for macOS title bar */
 .titlebar-drag {
@@ -142,3 +132,155 @@ body,
 .titlebar-no-drag {
   -webkit-app-region: no-drag;
 }
+
+/* ── Design token colours ─────────────────────────────────────────── */
+:root {
+  --lm-bg:         #FAFAF7;
+  --lm-chrome:     #FFFFFF;
+  --lm-sidebar:    #F4F2EE;
+  --lm-titlebar:   #F0EEE9;
+  --lm-border:     #E8E6E0;
+  --lm-ink:        #1F1F23;
+  --lm-ink-soft:   #6B6B70;
+  --lm-ink-faint:  #A0A09A;
+}
+.dark {
+  --lm-bg:         #1A1A1F;
+  --lm-chrome:     #1F1F25;
+  --lm-sidebar:    #16161A;
+  --lm-titlebar:   #15151A;
+  --lm-border:     #2A2A30;
+  --lm-ink:        #ECECEF;
+  --lm-ink-soft:   #A8A8B0;
+  --lm-ink-faint:  #6B6B70;
+}
+
+/* ── App surface colours (override Tailwind utility classes) ─────── */
+.lm-bg       { background-color: var(--lm-bg); }
+.lm-chrome   { background-color: var(--lm-chrome); }
+.lm-sidebar  { background-color: var(--lm-sidebar); }
+.lm-titlebar { background-color: var(--lm-titlebar); }
+.lm-border   { border-color: var(--lm-border); }
+.lm-ink      { color: var(--lm-ink); }
+.lm-ink-soft { color: var(--lm-ink-soft); }
+.lm-ink-faint{ color: var(--lm-ink-faint); }
+
+/* ── Editor canvas ──────────────────────────────────────────────────── */
+.ProseMirror {
+  outline: none;
+  min-height: 100%;
+  max-width: 80%;
+  margin: 0 auto;
+  padding: 44px 0 3rem;
+  caret-color: #5B6CFF;
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--lm-ink);
+}
+
+/* Type scale overrides (beat Tailwind Typography's :where() specificity) */
+.ProseMirror h1 {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.8px;
+  line-height: 1.15;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+.ProseMirror h2 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  line-height: 1.4;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+.ProseMirror h3 {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 1.25rem;
+  margin-bottom: 0.4rem;
+}
+.ProseMirror h4 {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 1rem;
+  margin-bottom: 0.3rem;
+}
+
+/* Blockquote — indigo left border */
+.ProseMirror blockquote {
+  border-left: 2px solid #5B6CFF;
+  margin: 1.25rem 0;
+  padding: 0 0 0 18px;
+  color: var(--lm-ink-soft);
+  font-style: italic;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+/* Inline code */
+.ProseMirror code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 13.5px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--lm-ink);
+}
+.dark .ProseMirror code {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Links */
+.ProseMirror a {
+  color: #5B6CFF;
+  font-weight: 600;
+  text-decoration: none;
+}
+.ProseMirror a:hover {
+  text-decoration: underline;
+}
+
+/* Selection — indigo tint */
+.ProseMirror ::selection {
+  background: rgba(91, 108, 255, 0.15);
+}
+
+/* ── Syntax highlighting (lowlight / highlight.js tokens) ────────────────── */
+/* Light mode */
+.hljs-comment, .hljs-quote          { color: #6e7781; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag,
+.hljs-built_in, .hljs-name         { color: #cf222e; }
+.hljs-string, .hljs-attr,
+.hljs-symbol, .hljs-bullet,
+.hljs-addition                      { color: #0a3069; }
+.hljs-number, .hljs-literal,
+.hljs-link                          { color: #0550ae; }
+.hljs-variable, .hljs-template-variable { color: #953800; }
+.hljs-title, .hljs-section,
+.hljs-attribute, .hljs-type        { color: #6639ba; }
+.hljs-tag                           { color: #116329; }
+.hljs-meta                          { color: #3e4047; }
+.hljs-deletion                      { color: #82071e; }
+.hljs-emphasis                      { font-style: italic; }
+.hljs-strong                        { font-weight: bold; }
+
+/* Dark mode overrides */
+.dark .hljs-comment, .dark .hljs-quote          { color: #8b949e; }
+.dark .hljs-keyword, .dark .hljs-selector-tag,
+.dark .hljs-built_in, .dark .hljs-name         { color: #ff7b72; }
+.dark .hljs-string, .dark .hljs-attr,
+.dark .hljs-symbol, .dark .hljs-bullet,
+.dark .hljs-addition                            { color: #a5d6ff; }
+.dark .hljs-number, .dark .hljs-literal,
+.dark .hljs-link                                { color: #79c0ff; }
+.dark .hljs-variable,
+.dark .hljs-template-variable                   { color: #ffa657; }
+.dark .hljs-title, .dark .hljs-section,
+.dark .hljs-attribute, .dark .hljs-type        { color: #d2a8ff; }
+.dark .hljs-tag                                 { color: #7ee787; }
+.dark .hljs-meta                                { color: #e3b341; }
+.dark .hljs-deletion                            { color: #ffa198; }

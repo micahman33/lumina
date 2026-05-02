@@ -2,6 +2,7 @@ export interface RecentFile {
   path: string
   name: string
   lastOpened: string // ISO date string
+  snippet?: string   // first ~300 chars of plain text, for search
 }
 
 export interface FileState {
