@@ -52,23 +52,28 @@ function buildTxtDoc(raw: string): object {
   const nodes: object[] = []
   let block: string[] = []
 
+  /** Wrap list item text in a paragraph node, guarding against the empty-string
+   *  case — ProseMirror text nodes MUST be non-empty or TipTap throws. */
+  const listItemNode = (text: string): object => ({
+    type: 'listItem',
+    content: [
+      text
+        ? { type: 'paragraph', content: [{ type: 'text', text }] }
+        : { type: 'paragraph' }
+    ]
+  })
+
   const flushBlock = (): void => {
     if (block.length === 0) return
     if (block.every((l) => /^[-*+]\s/.test(l))) {
       nodes.push({
         type: 'bulletList',
-        content: block.map((l) => ({
-          type: 'listItem',
-          content: [{ type: 'paragraph', content: [{ type: 'text', text: l.replace(/^[-*+]\s+/, '') }] }]
-        }))
+        content: block.map((l) => listItemNode(l.replace(/^[-*+]\s+/, '')))
       })
     } else if (block.every((l) => /^\d+\.\s/.test(l))) {
       nodes.push({
         type: 'orderedList',
-        content: block.map((l) => ({
-          type: 'listItem',
-          content: [{ type: 'paragraph', content: [{ type: 'text', text: l.replace(/^\d+\.\s+/, '') }] }]
-        }))
+        content: block.map((l) => listItemNode(l.replace(/^\d+\.\s+/, '')))
       })
     } else {
       // Regular block: one paragraph per line so Enter-key editing stays line-faithful
@@ -180,10 +185,20 @@ export function useFile(editor: Editor | null): {
   const loadContent = useCallback(
     (raw: string, fileType: FileType) => {
       if (!editor) return
-      if (fileType === 'txt') {
-        editor.commands.setContent(buildTxtDoc(raw))
-      } else {
-        editor.commands.setContent(raw)
+      try {
+        if (fileType === 'txt') {
+          editor.commands.setContent(buildTxtDoc(raw))
+        } else {
+          editor.commands.setContent(raw)
+        }
+      } catch (err) {
+        // Fallback: if the parsed doc is rejected by the ProseMirror schema,
+        // load as plain text paragraphs so the user isn't left with a blank editor.
+        console.error('[Lumina] setContent failed, falling back to plain text:', err)
+        const fallback = { type: 'doc', content: raw.split(/\r?\n/).map((line) =>
+          line ? { type: 'paragraph', content: [{ type: 'text', text: line }] } : { type: 'paragraph' }
+        )}
+        editor.commands.setContent(fallback)
       }
       markDirty(false)
     },
