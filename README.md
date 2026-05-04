@@ -7,6 +7,10 @@
 <p align="center"><em>A lightweight, elegant editor for the documents you actually want to read.</em></p>
 
 <p align="center">
+  <a href="https://luminaeditor.com"><strong>luminaeditor.com</strong></a>
+</p>
+
+<p align="center">
   <a href="https://github.com/micahman33/lumina/releases/latest">
     <img src="https://img.shields.io/github/v/release/micahman33/lumina?style=flat-square&color=5b6ee8" alt="Latest Release" />
   </a>
@@ -21,9 +25,9 @@
 
 **Just write.**
 
-Lumina is a WYSIWYG Markdown editor for macOS and Windows. Format what you mean — the Markdown is written for you, behind the glass.
+Lumina is a WYSIWYG editor for Markdown and plain text files on macOS and Windows. Format what you mean — the Markdown is written for you, behind the glass.
 
-Open any `.md` file and it just works. The cursor sits where you see it. Headings look like headings.
+Open any `.md` or `.txt` file and it just works. The cursor sits where you see it. Headings look like headings.
 
 *The best tool is the one you forget you're using.*
 
@@ -55,6 +59,24 @@ Open any `.md` file and it just works. The cursor sits where you see it. Heading
 
 ### v1.1.0
 
+**Plain Text (.txt) Support**
+- Open, edit, and save `.txt` files natively — no Markdown injection, no hidden formatting
+- Lumina detects numbered lists (`1. item`) and bullet lists (`- item`) in plain text files and renders them beautifully, while keeping the file on disk as clean plain text
+- Toolbar automatically hides Markdown-only controls (headings, code blocks, tables) when editing a plain text file
+- Status bar shows "Plain Text" vs "Markdown" based on the active file
+- Floating selection toolbar is suppressed in plain text mode
+
+**Lumina Documents Folder**
+- All new files default to `~/Documents/Lumina/` — no more lost files in random directories
+- Welcome guide now lives at `~/Documents/Lumina/Welcome to Lumina.md` and is created automatically on first launch
+- File open/save dialogs open to the Lumina folder by default
+
+**Save As — Format-Aware**
+- The Save As dialog now shows the filename *without* an extension, so macOS automatically appends the correct extension (`.md` or `.txt`) based on the Format dropdown you choose — no more `test.md.txt` confusion
+
+**Default App Setup**
+- Settings → Default App section with step-by-step instructions for making Lumina your default `.txt` editor on macOS (via Finder Get Info) and Windows
+
 **UI & Design**
 - Redesigned toolbar with logical clusters, Undo/Redo buttons, and a Format dropdown (Paragraph, H1–H4) that reflects whatever your cursor is on
 - Toolbar formatting buttons (Bold, Italic, lists, blocks) now stay in sync with cursor position in real time
@@ -78,9 +100,11 @@ Open any `.md` file and it just works. The cursor sits where you see it. Heading
 - Opening a file from Finder/Explorer always takes priority
 
 **Bug Fixes**
+- External images in Markdown files (shields.io badges, hosted diagrams) now render correctly
 - Word count now reflects the correct count immediately on file open (was showing 0 until first edit)
 - Fixed Windows title bar showing full file path instead of filename
 - Sidebar search index is populated on first open, so files are searchable immediately
+- Fixed crash when opening certain `.txt` files via double-click while Lumina was already running
 
 ---
 
