@@ -4,6 +4,7 @@ import { registerAllHandlers } from './ipc'
 import { registerMediaProtocol } from './ipc/imageHandlers'
 import { buildMenu } from './menu'
 import { applyWindowState, trackWindowState } from './windowState'
+import { initUpdater } from './updater'
 import { IPC } from '../renderer/src/types/ipc'
 
 let mainWindow: BrowserWindow | null = null
@@ -17,7 +18,7 @@ let isQuitting = false
 app.on('open-file', (event, path) => {
   event.preventDefault()
   pendingOpenPath = path
-  if (mainWindow) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send(IPC.PUSH_OPEN_FILE, path)
   }
 })
@@ -82,6 +83,14 @@ function createWindow(): void {
       mainWindow!.webContents.send(IPC.PUSH_OPEN_FILE, pendingOpenPath)
       pendingOpenPath = null
     }
+    // Only check for updates in packaged builds — not during development
+    if (app.isPackaged) initUpdater(mainWindow!)
+  })
+
+  // Null out the reference once the window is fully gone so isDestroyed()
+  // checks elsewhere don't need to be the last line of defence.
+  mainWindow.on('closed', () => {
+    mainWindow = null
   })
 
   mainWindow.on('close', async (event) => {
@@ -92,19 +101,23 @@ function createWindow(): void {
     // Capture the quit intent before any async gap.
     const shouldQuit = isQuitting
 
-    const isDirty = await mainWindow!.webContents.executeJavaScript(
+    // Window may have been destroyed during the async gap — bail out safely.
+    if (!mainWindow || mainWindow.isDestroyed()) return
+
+    const isDirty = await mainWindow.webContents.executeJavaScript(
       'window.__lumina_isDirty__ || false'
     )
 
+    if (!mainWindow || mainWindow.isDestroyed()) return
+
     if (!isDirty) {
       allowClose = true
-      mainWindow!.close()
-      // If Cmd+Q triggered this, close() alone won't quit on macOS — do it explicitly.
+      mainWindow.close()
       if (shouldQuit) app.quit()
       return
     }
 
-    const choice = dialog.showMessageBoxSync(mainWindow!, {
+    const choice = dialog.showMessageBoxSync(mainWindow, {
       type: 'question',
       buttons: ['Save', "Don't Save", 'Cancel'],
       defaultId: 0,
@@ -113,17 +126,20 @@ function createWindow(): void {
       detail: 'Your changes will be lost if you close without saving.'
     })
 
+    if (!mainWindow || mainWindow.isDestroyed()) return
+
     if (choice === 0) {
-      // Ask renderer to save, then close after a short grace period.
-      mainWindow!.webContents.send(IPC.PUSH_MENU_SAVE)
+      mainWindow.webContents.send(IPC.PUSH_MENU_SAVE)
       setTimeout(() => {
-        allowClose = true
-        mainWindow?.close()
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          allowClose = true
+          mainWindow.close()
+        }
         if (shouldQuit) app.quit()
       }, 500)
     } else if (choice === 1) {
       allowClose = true
-      mainWindow!.close()
+      mainWindow.close()
       if (shouldQuit) app.quit()
     }
     // choice === 2: Cancel — stay open, clear the quit flag.
@@ -161,7 +177,9 @@ app.whenReady().then(() => {
   // Push OS theme changes to the renderer
   nativeTheme.on('updated', () => {
     const theme = nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
-    mainWindow?.webContents.send(IPC.PUSH_THEME_CHANGE, theme)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(IPC.PUSH_THEME_CHANGE, theme)
+    }
   })
 
   createWindow()
