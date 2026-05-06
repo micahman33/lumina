@@ -9,6 +9,9 @@ export const IPC = {
   RECENT_ADD: 'recent:add',
   SETTINGS_GET: 'settings:get',
   SETTINGS_SET: 'settings:set',
+  // Spell-check
+  SPELL_GET: 'spell:get-suggestions',
+  SPELL_REPLACE: 'spell:replace',
   // Push from main → renderer
   PUSH_OPEN_FILE: 'push:open-file',
   PUSH_MENU_SAVE: 'push:menu-save',

@@ -79,9 +79,13 @@ export function EditorCore({ editor, insertImageRef }: EditorCoreProps): JSX.Ele
     insertImageRef.current = handleInsertImage
   }, [insertImageRef, handleInsertImage])
 
-  const handleContextMenu = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+  const handleContextMenu = useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault()
-    setContextMenu({ x: e.clientX, y: e.clientY, visible: true })
+    // Fetch OS spell-check data captured by the main process on the same right-click event.
+    // The native context-menu event fires before the renderer's onContextMenu, so by the
+    // time this async call resolves the main process already has the latest spell data.
+    const spell = await window.api.getSpellSuggestions()
+    setContextMenu({ x: e.clientX, y: e.clientY, visible: true, spell })
   }, [])
 
   return (

@@ -10,6 +10,11 @@ import { IPC } from '../renderer/src/types/ipc'
 let mainWindow: BrowserWindow | null = null
 let pendingOpenPath: string | null = null
 let allowClose = false
+// Last spell-check data captured from the native context-menu event
+let lastSpellData: { misspelledWord: string; suggestions: string[] } = {
+  misspelledWord: '',
+  suggestions: []
+}
 // Tracks whether the window close was triggered by Cmd+Q / app.quit()
 // so we can call app.quit() again after our async dialog finishes.
 let isQuitting = false
@@ -68,6 +73,14 @@ function createWindow(): void {
 
   applyWindowState(mainWindow)
   trackWindowState(mainWindow)
+
+  // Capture OS spell-check data so the renderer can include suggestions in its custom context menu
+  mainWindow.webContents.on('context-menu', (_e, params) => {
+    lastSpellData = {
+      misspelledWord: params.misspelledWord ?? '',
+      suggestions: params.dictionarySuggestions ?? []
+    }
+  })
 
   // Redirect all window.open / target=_blank calls to the system browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -159,6 +172,14 @@ app.whenReady().then(() => {
   // Register all IPC handlers once — NOT inside createWindow()
   registerAllHandlers()
   registerMediaProtocol()
+
+  // Spell-check — renderer asks for the last captured OS suggestions
+  ipcMain.handle('spell:get-suggestions', () => lastSpellData)
+
+  // Renderer picked a suggestion — use Chromium's built-in replaceMisspelling
+  ipcMain.on('spell:replace', (_e, word: string) => {
+    mainWindow?.webContents.replaceMisspelling(word)
+  })
 
   // shell:open-external — used by the renderer for link clicks
   ipcMain.handle('shell:open-external', (_, url: string) => {

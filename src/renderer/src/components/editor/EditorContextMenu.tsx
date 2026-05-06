@@ -9,10 +9,16 @@ import {
 import type { Editor } from '@tiptap/react'
 import { useAppStore } from '../../store/appStore'
 
+export interface SpellData {
+  misspelledWord: string
+  suggestions: string[]
+}
+
 export interface ContextMenuState {
   x: number
   y: number
   visible: boolean
+  spell?: SpellData
 }
 
 interface EditorContextMenuProps {
@@ -173,6 +179,33 @@ function FormatSubmenu({
         </div>
       )}
     </div>
+  )
+}
+
+// ── Spell-check suggestions ────────────────────────────────────────────────
+
+function SpellSuggestions({
+  spell,
+  run
+}: {
+  spell: SpellData
+  run: (fn: () => void) => void
+}): JSX.Element | null {
+  if (!spell.misspelledWord || spell.suggestions.length === 0) return null
+  return (
+    <>
+      <SectionLabel>Spelling suggestions</SectionLabel>
+      {spell.suggestions.slice(0, 5).map((word) => (
+        <button
+          key={word}
+          className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+          onClick={() => run(() => window.api.replaceMisspelling(word))}
+        >
+          <span className="flex-1 text-left">{word}</span>
+        </button>
+      ))}
+      <Sep />
+    </>
   )
 }
 
@@ -342,6 +375,7 @@ export function EditorContextMenu({
       className="fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl py-1.5 overflow-visible"
       style={{ left: x, top: y, width: menuWidth, maxHeight: menuHeight }}
     >
+      {menuState.spell && <SpellSuggestions spell={menuState.spell} run={run} />}
       {ctx === 'selection' && <SelectionItems />}
       {ctx === 'link' && <LinkItems />}
       {ctx === 'table' && <TableItems />}

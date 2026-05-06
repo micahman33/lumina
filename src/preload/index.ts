@@ -55,7 +55,12 @@ const api = {
     return () => ipcRenderer.removeListener(IPC.PUSH_THEME_CHANGE, handler)
   },
 
-  openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url)
+  openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),
+
+  getSpellSuggestions: (): Promise<{ misspelledWord: string; suggestions: string[] }> =>
+    ipcRenderer.invoke(IPC.SPELL_GET),
+
+  replaceMisspelling: (word: string): void => ipcRenderer.send(IPC.SPELL_REPLACE, word)
 }
 
 contextBridge.exposeInMainWorld('api', api)
