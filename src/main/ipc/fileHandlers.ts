@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow, app } from 'electron'
+import { ipcMain, dialog, BrowserWindow, app, shell } from 'electron'
 import { readFile, writeFile, mkdir } from 'fs/promises'
 import { basename, extname, join } from 'path'
 import { IPC } from '../../renderer/src/types/ipc'
@@ -136,8 +136,27 @@ export function registerFileHandlers(): void {
     const existing = store.get('recentFiles').filter((f) => f.path !== path)
     const entry: RecentFile = { path, name, lastOpened: new Date().toISOString() }
     if (snippet) entry.snippet = snippet
-    const updated: RecentFile[] = [entry, ...existing].slice(0, 20)
+    // Pinned files are preserved outside the 20-file cap
+    const pinned = existing.filter((f) => f.pinned)
+    const unpinned = existing.filter((f) => !f.pinned)
+    const updated: RecentFile[] = [...pinned, entry, ...unpinned].slice(0, 20 + pinned.length)
     store.set('recentFiles', updated)
+  })
+
+  ipcMain.handle(IPC.RECENT_REMOVE, (_, path: string): void => {
+    const updated = store.get('recentFiles').filter((f) => f.path !== path)
+    store.set('recentFiles', updated)
+  })
+
+  ipcMain.handle(IPC.RECENT_PIN, (_, path: string): RecentFile[] => {
+    const files = store.get('recentFiles')
+    const updated = files.map((f) => f.path === path ? { ...f, pinned: !f.pinned } : f)
+    store.set('recentFiles', updated)
+    return updated
+  })
+
+  ipcMain.handle(IPC.RECENT_REVEAL, (_, path: string): void => {
+    shell.showItemInFolder(path)
   })
 
   ipcMain.handle(IPC.SETTINGS_GET, () => {

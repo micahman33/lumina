@@ -8,6 +8,7 @@ interface AppState {
   recentFiles: RecentFile[]
   settingsOpen: boolean
   linkDialogOpen: boolean
+  findReplaceOpen: boolean
   sidebarSearch: string
 
   setFile: (file: Partial<FileState>) => void
@@ -18,6 +19,7 @@ interface AppState {
   setRecentFiles: (files: RecentFile[]) => void
   setSettingsOpen: (open: boolean) => void
   setLinkDialogOpen: (open: boolean) => void
+  setFindReplaceOpen: (open: boolean) => void
   setSidebarSearch: (q: string) => void
 }
 
@@ -28,6 +30,7 @@ export const useAppStore = create<AppState>((set) => ({
   recentFiles: [],
   settingsOpen: false,
   linkDialogOpen: false,
+  findReplaceOpen: false,
   sidebarSearch: '',
 
   setFile: (partial) =>
@@ -46,5 +49,6 @@ export const useAppStore = create<AppState>((set) => ({
 
   setSettingsOpen: (open) => set({ settingsOpen: open }),
   setLinkDialogOpen: (open) => set({ linkDialogOpen: open }),
+  setFindReplaceOpen: (open) => set({ findReplaceOpen: open }),
   setSidebarSearch: (q) => set({ sidebarSearch: q })
 }))

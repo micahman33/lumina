@@ -31,6 +31,15 @@ const api = {
   addRecentFile: (path: string, snippet?: string): Promise<void> =>
     ipcRenderer.invoke(IPC.RECENT_ADD, path, snippet),
 
+  removeRecentFile: (path: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.RECENT_REMOVE, path),
+
+  pinRecentFile: (path: string): Promise<RecentFile[]> =>
+    ipcRenderer.invoke(IPC.RECENT_PIN, path),
+
+  revealFile: (path: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.RECENT_REVEAL, path),
+
   getSettings: (): Promise<AppSettings> => ipcRenderer.invoke(IPC.SETTINGS_GET),
 
   setSettings: (partial: Partial<AppSettings>): Promise<void> =>

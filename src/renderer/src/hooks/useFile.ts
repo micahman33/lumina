@@ -142,6 +142,30 @@ export function useFile(editor: Editor | null): {
     })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Auto-save: 2 seconds after the last edit, if the file already has a path
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    const unsub = useAppStore.subscribe((state) => {
+      if (state.file.isDirty && state.file.path) {
+        if (timer) clearTimeout(timer)
+        timer = setTimeout(() => {
+          // Re-read state at fire time — path may have changed
+          const s = useAppStore.getState()
+          if (s.file.isDirty && s.file.path) saveFile()
+        }, 2000)
+      } else if (timer) {
+        clearTimeout(timer)
+        timer = null
+      }
+    })
+
+    return () => {
+      unsub()
+      if (timer) clearTimeout(timer)
+    }
+  }, [saveFile])
+
   // Sync dirty flag to window global for close guard
   useEffect(() => {
     return useAppStore.subscribe((state) => {

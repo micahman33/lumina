@@ -26,6 +26,7 @@ import { TaskItem } from '@tiptap/extension-task-item'
 import { Typography } from '@tiptap/extension-typography'
 import { Markdown } from 'tiptap-markdown'
 import { useAppStore } from '../store/appStore'
+import { SearchAndReplace } from '../extensions/searchAndReplace'
 
 const LinkShortcut = Extension.create({
   name: 'linkShortcut',
@@ -33,6 +34,10 @@ const LinkShortcut = Extension.create({
     return {
       'Mod-k': () => {
         useAppStore.getState().setLinkDialogOpen(true)
+        return true
+      },
+      'Mod-f': () => {
+        useAppStore.getState().setFindReplaceOpen(true)
         return true
       }
     }
@@ -78,7 +83,8 @@ export function useEditor() {
       TaskItem.configure({
         nested: true
       }),
-      LinkShortcut
+      LinkShortcut,
+      SearchAndReplace,
     ],
     content: '',
     onCreate: ({ editor: e }) => {

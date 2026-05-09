@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
-import { Search, FilePlus, Folder } from 'lucide-react'
+import { Search, FilePlus, Folder, Pin, PinOff, FolderOpen, Trash2 } from 'lucide-react'
+import type { RecentFile } from '../../types/file'
 
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
@@ -20,21 +21,38 @@ interface SidebarProps {
   onNewFile: () => void
 }
 
+interface CtxMenu {
+  x: number
+  y: number
+  file: RecentFile
+}
+
 export function Sidebar({ onOpenFile, onNewFile }: SidebarProps): JSX.Element {
   const sidebarOpen = useAppStore((s) => s.sidebarOpen)
   const recentFiles = useAppStore((s) => s.recentFiles)
+  const setRecentFiles = useAppStore((s) => s.setRecentFiles)
   const activeFilePath = useAppStore((s) => s.file.path)
   const [query, setQuery] = useState('')
+  const [ctxMenu, setCtxMenu] = useState<CtxMenu | null>(null)
+  const ctxRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
   const q = query.trim().toLowerCase()
+
+  // Pinned files always sort first
+  const sorted = [...recentFiles].sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1
+    if (!a.pinned && b.pinned) return 1
+    return 0
+  })
+
   const filtered = q
-    ? recentFiles.filter(
+    ? sorted.filter(
         (f) =>
           f.name.toLowerCase().includes(q) ||
           (f.snippet ?? '').toLowerCase().includes(q)
       )
-    : recentFiles
+    : sorted
 
   /** Return a short excerpt around the query match within the snippet. */
   function snippetExcerpt(snippet: string | undefined): string | null {
@@ -44,6 +62,46 @@ export function Sidebar({ onOpenFile, onNewFile }: SidebarProps): JSX.Element {
     const start = Math.max(0, idx - 30)
     const end = Math.min(snippet.length, idx + q.length + 60)
     return (start > 0 ? '…' : '') + snippet.slice(start, end) + (end < snippet.length ? '…' : '')
+  }
+
+  // Close context menu on outside click or Escape
+  useEffect(() => {
+    if (!ctxMenu) return
+    const handler = (e: MouseEvent): void => {
+      if (ctxRef.current && !ctxRef.current.contains(e.target as Node)) setCtxMenu(null)
+    }
+    const keyHandler = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') setCtxMenu(null)
+    }
+    document.addEventListener('mousedown', handler)
+    document.addEventListener('keydown', keyHandler)
+    return () => {
+      document.removeEventListener('mousedown', handler)
+      document.removeEventListener('keydown', keyHandler)
+    }
+  }, [ctxMenu])
+
+  const handleContextMenu = (e: React.MouseEvent, file: RecentFile): void => {
+    e.preventDefault()
+    e.stopPropagation()
+    setCtxMenu({ x: e.clientX, y: e.clientY, file })
+  }
+
+  const handlePin = async (file: RecentFile): Promise<void> => {
+    setCtxMenu(null)
+    const updated = await window.api.pinRecentFile(file.path)
+    setRecentFiles(updated)
+  }
+
+  const handleReveal = (file: RecentFile): void => {
+    setCtxMenu(null)
+    window.api.revealFile(file.path)
+  }
+
+  const handleRemove = async (file: RecentFile): Promise<void> => {
+    setCtxMenu(null)
+    await window.api.removeRecentFile(file.path)
+    setRecentFiles(recentFiles.filter((f) => f.path !== file.path))
   }
 
   // Parent directory of active file for footer
@@ -131,6 +189,7 @@ export function Sidebar({ onOpenFile, onNewFile }: SidebarProps): JSX.Element {
                 <button
                   key={file.path}
                   onClick={() => onOpenFile(file.path)}
+                  onContextMenu={(e) => handleContextMenu(e, file)}
                   title={file.path}
                   className="titlebar-no-drag w-full text-left transition-colors duration-100"
                   style={{
@@ -158,6 +217,14 @@ export function Sidebar({ onOpenFile, onNewFile }: SidebarProps): JSX.Element {
                       background: '#5B6CFF',
                     }} />
                   )}
+
+                  {/* Pin indicator */}
+                  {file.pinned && (
+                    <div style={{ position: 'absolute', right: 8, top: 8 }}>
+                      <Pin size={10} style={{ color: '#5B6CFF', opacity: 0.7 }} />
+                    </div>
+                  )}
+
                   <div style={{
                     fontSize: 13,
                     fontWeight: active ? 600 : 500,
@@ -166,6 +233,7 @@ export function Sidebar({ onOpenFile, onNewFile }: SidebarProps): JSX.Element {
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
+                    paddingRight: file.pinned ? 16 : 0,
                   }}>
                     {file.name}
                   </div>
@@ -207,6 +275,66 @@ export function Sidebar({ onOpenFile, onNewFile }: SidebarProps): JSX.Element {
           </div>
         )}
       </div>
+
+      {/* Right-click context menu */}
+      {ctxMenu && (
+        <div
+          ref={ctxRef}
+          className="fixed z-50 py-1.5 rounded-xl shadow-xl border"
+          style={{
+            left: Math.min(ctxMenu.x, window.innerWidth - 200),
+            top: Math.min(ctxMenu.y, window.innerHeight - 140),
+            width: 192,
+            background: 'var(--lm-chrome)',
+            borderColor: 'var(--lm-border)',
+          }}
+        >
+          <CtxItem
+            icon={ctxMenu.file.pinned ? PinOff : Pin}
+            label={ctxMenu.file.pinned ? 'Unpin' : 'Pin to top'}
+            onClick={() => handlePin(ctxMenu.file)}
+          />
+          <CtxItem
+            icon={FolderOpen}
+            label={process.platform === 'darwin' ? 'Reveal in Finder' : 'Show in Explorer'}
+            onClick={() => handleReveal(ctxMenu.file)}
+          />
+          <div className="border-t my-1" style={{ borderColor: 'var(--lm-border)' }} />
+          <CtxItem
+            icon={Trash2}
+            label="Remove from recents"
+            danger
+            onClick={() => handleRemove(ctxMenu.file)}
+          />
+        </div>
+      )}
     </div>
+  )
+}
+
+function CtxItem({
+  icon: Icon,
+  label,
+  danger,
+  onClick,
+}: {
+  icon: React.FC<{ size?: number }>
+  label: string
+  danger?: boolean
+  onClick: () => void
+}): JSX.Element {
+  return (
+    <button
+      className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-sm transition-colors ${
+        danger
+          ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+          : 'hover:bg-black/5 dark:hover:bg-white/10'
+      }`}
+      style={{ color: danger ? undefined : 'var(--lm-ink)', border: 'none', background: 'none', cursor: 'pointer' }}
+      onClick={onClick}
+    >
+      <Icon size={13} />
+      <span className="flex-1 text-left text-[13px]">{label}</span>
+    </button>
   )
 }

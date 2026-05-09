@@ -5,6 +5,7 @@ export interface RecentFile {
   name: string
   lastOpened: string // ISO date string
   snippet?: string   // first ~300 chars of plain text, for search
+  pinned?: boolean   // pinned files sort to top and never age off
 }
 
 export interface FileState {

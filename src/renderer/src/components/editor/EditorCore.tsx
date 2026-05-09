@@ -90,7 +90,7 @@ export function EditorCore({ editor, insertImageRef }: EditorCoreProps): JSX.Ele
 
   return (
     <div
-      className={`flex-1 overflow-y-auto relative lm-bg${fileType === 'txt' ? ' txt-mode' : ''}`}
+      className={`flex-1 overflow-y-auto lm-bg${fileType === 'txt' ? ' txt-mode' : ''}`}
       onDrop={handleDrop}
       onDragOver={(e) => e.preventDefault()}
       onContextMenu={handleContextMenu}

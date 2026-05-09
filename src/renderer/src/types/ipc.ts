@@ -9,6 +9,10 @@ export const IPC = {
   RECENT_ADD: 'recent:add',
   SETTINGS_GET: 'settings:get',
   SETTINGS_SET: 'settings:set',
+  // Recent files management
+  RECENT_REMOVE: 'recent:remove',
+  RECENT_PIN: 'recent:pin',
+  RECENT_REVEAL: 'recent:reveal',
   // Spell-check
   SPELL_GET: 'spell:get-suggestions',
   SPELL_REPLACE: 'spell:replace',

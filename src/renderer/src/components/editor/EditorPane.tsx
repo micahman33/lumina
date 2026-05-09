@@ -3,6 +3,7 @@ import type { Editor } from '@tiptap/react'
 import { Toolbar } from './Toolbar'
 import { EditorCore } from './EditorCore'
 import { StatusBar } from './StatusBar'
+import { FindReplacePanel } from './FindReplacePanel'
 
 interface EditorPaneProps {
   editor: Editor
@@ -21,7 +22,11 @@ export function EditorPane({ editor, onOpenFile, onSaveFile }: EditorPaneProps):
   return (
     <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
       <Toolbar editor={editor} onOpenFile={onOpenFile} onSaveFile={onSaveFile} onInsertImage={onInsertImage} />
-      <EditorCore editor={editor} insertImageRef={insertImageRef} />
+      {/* relative wrapper so FindReplacePanel can position absolutely within the editor area */}
+      <div className="flex-1 min-h-0 relative flex flex-col">
+        <FindReplacePanel editor={editor} />
+        <EditorCore editor={editor} insertImageRef={insertImageRef} />
+      </div>
       <StatusBar editor={editor} />
     </div>
   )

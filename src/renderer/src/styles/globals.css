@@ -273,6 +273,25 @@ body,
   margin-bottom: 0 !important;
 }
 
+/* ── Find & Replace highlight decorations ───────────────────────────────── */
+.search-result {
+  background: rgba(255, 200, 0, 0.35);
+  border-radius: 2px;
+}
+.dark .search-result {
+  background: rgba(255, 200, 0, 0.25);
+}
+/* Current match — more vivid */
+.search-result-current {
+  background: rgba(255, 140, 0, 0.55);
+  border-radius: 2px;
+  outline: 1px solid rgba(255, 140, 0, 0.8);
+}
+.dark .search-result-current {
+  background: rgba(255, 160, 0, 0.45);
+  outline-color: rgba(255, 160, 0, 0.7);
+}
+
 /* ── Syntax highlighting (lowlight / highlight.js tokens) ────────────────── */
 /* Light mode */
 .hljs-comment, .hljs-quote          { color: #6e7781; font-style: italic; }
