@@ -25,6 +25,7 @@ import { TaskList } from '@tiptap/extension-task-list'
 import { TaskItem } from '@tiptap/extension-task-item'
 import { Typography } from '@tiptap/extension-typography'
 import { Markdown } from 'tiptap-markdown'
+import { TextAlign } from '@tiptap/extension-text-align'
 import { useAppStore } from '../store/appStore'
 import { SearchAndReplace } from '../extensions/searchAndReplace'
 
@@ -54,10 +55,38 @@ export function useEditor() {
         codeBlock: false
       }),
       CodeBlockWithPicker,
+      // html: true lets the markdown parser interpret inline HTML blocks (e.g. <p align="center">,
+      // <img>, <br>) instead of showing them as raw escaped text. This is the correct behaviour
+      // for a local desktop editor — the XSS concern that motivates html:false in web apps
+      // does not apply here because files are opened from the local filesystem.
       Markdown.configure({
-        html: false,
+        html: true,
         transformPastedText: true,
         transformCopiedText: false
+      }),
+      // TextAlign lets the schema preserve and render text-align on block nodes.
+      // We extend it to also parse the deprecated HTML `align` attribute used by many
+      // GitHub-flavoured README files (e.g. <p align="center">), mapping it to the
+      // standard textAlign attribute so it renders visually centred/right.
+      TextAlign.configure({
+        types: ['heading', 'paragraph'],
+        alignments: ['left', 'center', 'right'],
+      }).extend({
+        addGlobalAttributes() {
+          return [
+            {
+              types: ['heading', 'paragraph'],
+              attributes: {
+                textAlign: {
+                  parseHTML: (element) =>
+                    element.getAttribute('align') ||
+                    element.style.textAlign ||
+                    null,
+                },
+              },
+            },
+          ]
+        },
       }),
       Typography,
       Image.configure({
