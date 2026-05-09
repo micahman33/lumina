@@ -18,6 +18,12 @@ Object.defineProperty(window, 'api', {
     onMenuSave: vi.fn().mockReturnValue(() => {}),
     onThemeChange: vi.fn().mockReturnValue(() => {}),
     openExternal: vi.fn().mockResolvedValue(undefined),
+    platform: 'darwin' as NodeJS.Platform,
+    removeRecentFile: vi.fn().mockResolvedValue(undefined),
+    pinRecentFile: vi.fn().mockResolvedValue([]),
+    revealFile: vi.fn().mockResolvedValue(undefined),
+    getSpellSuggestions: vi.fn().mockResolvedValue({ misspelledWord: '', suggestions: [] }),
+    replaceMisspelling: vi.fn(),
   },
   writable: true,
 })

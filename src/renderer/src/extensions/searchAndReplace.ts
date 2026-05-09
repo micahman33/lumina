@@ -40,7 +40,7 @@ const searchKey = new PluginKey<DecorationSet>('searchAndReplace')
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function findAll(doc: PmNode, term: string, caseSensitive: boolean): SearchResult[] {
+export function findAll(doc: PmNode, term: string, caseSensitive: boolean): SearchResult[] {
   if (!term) return []
   const results: SearchResult[] = []
   const flags = caseSensitive ? 'g' : 'gi'

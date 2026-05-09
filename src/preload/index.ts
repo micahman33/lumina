@@ -66,6 +66,9 @@ const api = {
 
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),
 
+  // Exposed at startup — renderer cannot access process.platform directly
+  platform: process.platform,
+
   getSpellSuggestions: (): Promise<{ misspelledWord: string; suggestions: string[] }> =>
     ipcRenderer.invoke(IPC.SPELL_GET),
 

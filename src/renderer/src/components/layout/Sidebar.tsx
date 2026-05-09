@@ -296,7 +296,7 @@ export function Sidebar({ onOpenFile, onNewFile }: SidebarProps): JSX.Element {
           />
           <CtxItem
             icon={FolderOpen}
-            label={process.platform === 'darwin' ? 'Reveal in Finder' : 'Show in Explorer'}
+            label={window.api.platform === 'darwin' ? 'Reveal in Finder' : 'Show in Explorer'}
             onClick={() => handleReveal(ctxMenu.file)}
           />
           <div className="border-t my-1" style={{ borderColor: 'var(--lm-border)' }} />
