@@ -3,6 +3,7 @@ import {
   docDir,
   pathToFileUrl,
   pathToMediaUrl,
+  normalizeAlignAttributes,
   resolveRelativeImagePaths,
   unresolveRelativeImagePaths,
 } from '../markdownUtils'
@@ -56,6 +57,52 @@ describe('pathToMediaUrl', () => {
 
   it('normalises backslashes', () => {
     expect(pathToMediaUrl('C:\\Users\\alice')).toBe('media:///C:/Users/alice')
+  })
+})
+
+// ── normalizeAlignAttributes ──────────────────────────────────────────────────
+
+describe('normalizeAlignAttributes', () => {
+  it('converts p align=center to inline style', () => {
+    expect(normalizeAlignAttributes('<p align="center">text</p>'))
+      .toBe('<p style="text-align:center">text</p>')
+  })
+
+  it('converts h1 align=center to inline style', () => {
+    expect(normalizeAlignAttributes('<h1 align="center">Title</h1>'))
+      .toBe('<h1 style="text-align:center">Title</h1>')
+  })
+
+  it('handles left and right alignments', () => {
+    expect(normalizeAlignAttributes('<p align="right">text</p>'))
+      .toBe('<p style="text-align:right">text</p>')
+    expect(normalizeAlignAttributes('<p align="left">text</p>'))
+      .toBe('<p style="text-align:left">text</p>')
+  })
+
+  it('preserves other attributes on the element', () => {
+    const input = '<p class="foo" align="center" id="bar">text</p>'
+    const result = normalizeAlignAttributes(input)
+    expect(result).toContain('style="text-align:center"')
+    expect(result).toContain('class="foo"')
+    expect(result).toContain('id="bar"')
+    expect(result).not.toContain('align=')
+  })
+
+  it('is a no-op when no align attribute present', () => {
+    const input = '<p style="text-align:center">already styled</p>'
+    expect(normalizeAlignAttributes(input)).toBe(input)
+  })
+
+  it('handles multiple aligned elements', () => {
+    const input = '<p align="center">first</p>\n<p align="center">second</p>'
+    const result = normalizeAlignAttributes(input)
+    expect(result).toBe('<p style="text-align:center">first</p>\n<p style="text-align:center">second</p>')
+  })
+
+  it('is case-insensitive on the align value', () => {
+    expect(normalizeAlignAttributes('<p align="CENTER">text</p>'))
+      .toBe('<p style="text-align:CENTER">text</p>')
   })
 })
 

@@ -46,6 +46,23 @@ function escRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+// ── HTML normalisation (load-time) ────────────────────────────────────────────
+
+/**
+ * Convert the deprecated HTML `align="center|left|right"` attribute on block
+ * elements to an inline `style="text-align:..."` so that TipTap's TextAlign
+ * extension (which reads `element.style.textAlign`) picks it up correctly.
+ *
+ * Many GitHub README files use `<p align="center">` and `<h1 align="center">`
+ * which are valid in older HTML but not parsed by modern style-based tools.
+ */
+export function normalizeAlignAttributes(content: string): string {
+  return content.replace(
+    /(<(?:p|h[1-6])\b[^>]*?)\s+align="(left|center|right)"/gi,
+    (_, tag, val) => `${tag} style="text-align:${val}"`
+  )
+}
+
 // ── Resolve (load-time) ───────────────────────────────────────────────────────
 
 /**

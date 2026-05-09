@@ -39,7 +39,6 @@ const Image = BaseImage.extend({
     }
   },
 })
-import { Link } from '@tiptap/extension-link'
 import { Table } from '@tiptap/extension-table'
 import { TableRow } from '@tiptap/extension-table-row'
 import { TableCell } from '@tiptap/extension-table-cell'
@@ -74,8 +73,18 @@ export function useEditor() {
   const editor = useTiptapEditor({
     extensions: [
       StarterKit.configure({
-        // Replaced by CodeBlockWithPicker below
-        codeBlock: false
+        // CodeBlock replaced by CodeBlockWithPicker (syntax highlighting + language picker)
+        codeBlock: false,
+        // StarterKit v3 bundles @tiptap/extension-link.  Configure it here instead
+        // of adding a separate Link extension to avoid the "Duplicate extension names"
+        // warning and ensure a single, correctly-configured instance.
+        link: {
+          autolink: true,
+          openOnClick: false,
+          HTMLAttributes: {
+            class: 'text-blue-500 underline cursor-pointer'
+          }
+        },
       }),
       CodeBlockWithPicker,
       // html: true lets the markdown parser interpret inline HTML blocks (e.g. <p align="center">,
@@ -116,13 +125,6 @@ export function useEditor() {
         allowBase64: true,
         HTMLAttributes: {
           class: 'max-w-full rounded'
-        }
-      }),
-      Link.configure({
-        autolink: true,
-        openOnClick: false,
-        HTMLAttributes: {
-          class: 'text-blue-500 underline cursor-pointer'
         }
       }),
       Table.configure({

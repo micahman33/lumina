@@ -3,7 +3,7 @@ import { useAppStore } from '../store/appStore'
 import type { Editor } from '@tiptap/react'
 import type { FileType } from '../types/file'
 import { buildTxtDoc, serializeTxtDoc, detectFileType, extractSnippet } from '../utils/txtUtils'
-import { resolveRelativeImagePaths, unresolveRelativeImagePaths } from '../utils/markdownUtils'
+import { resolveRelativeImagePaths, unresolveRelativeImagePaths, normalizeAlignAttributes } from '../utils/markdownUtils'
 
 // Re-export detectFileType for backward compatibility (other files import it from here)
 export { detectFileType } from '../utils/txtUtils'
@@ -42,9 +42,12 @@ export function useFile(editor: Editor | null): {
         if (fileType === 'txt') {
           editor.commands.setContent(buildTxtDoc(raw))
         } else {
-          // Resolve relative image paths to file:// URLs so local images render.
-          // The reverse (unresolve) happens in getContent() before saving.
-          const content = filePath ? resolveRelativeImagePaths(raw, filePath) : raw
+          // 1. Normalise deprecated align="center" → style="text-align:center"
+          //    so TipTap's TextAlign extension centres the content correctly.
+          // 2. Resolve relative image paths to media:// URLs so local images render.
+          //    The reverse (unresolve) happens in getContent() before saving.
+          const aligned = normalizeAlignAttributes(raw)
+          const content = filePath ? resolveRelativeImagePaths(aligned, filePath) : aligned
           editor.commands.setContent(content)
         }
       } catch (err) {
