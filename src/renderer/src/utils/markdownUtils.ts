@@ -6,9 +6,9 @@
  *
  * The core concern: relative image paths in markdown (e.g. `src="build/icon.png"`
  * or `![icon](images/photo.jpg)`) cannot be resolved by the browser without an
- * explicit base. We convert them to `file://` absolute URLs when loading so they
- * render correctly, then restore the original relative paths when saving so the
- * file on disk is never corrupted.
+ * explicit base. We convert them to `media://` absolute URLs when loading so they
+ * render correctly via Electron's custom protocol handler, then restore the
+ * original relative paths when saving so the file on disk is never corrupted.
  */
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -25,6 +25,17 @@ export function pathToFileUrl(absPath: string): string {
   return normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`
 }
 
+/**
+ * Convert an absolute OS path to a `media://` URL served by Electron's custom
+ * protocol handler.  We use `media://` (not `file://`) for local images because
+ * Electron's webSecurity blocks `file://` URLs in the renderer process.
+ */
+export function pathToMediaUrl(absPath: string): string {
+  const normalized = absPath.replace(/\\/g, '/')
+  // On Windows paths start with a drive letter (C:/...), on Unix with /
+  return normalized.startsWith('/') ? `media://${normalized}` : `media:///${normalized}`
+}
+
 /** True if a src value is already an absolute URL that doesn't need resolving. */
 function isAbsoluteUrl(src: string): boolean {
   return /^(https?:|data:|file:|media:|blob:|\/\/|\/)/i.test(src.trim())
@@ -38,8 +49,8 @@ function escRe(s: string): string {
 // ── Resolve (load-time) ───────────────────────────────────────────────────────
 
 /**
- * Replace relative image sources in markdown content with absolute `file://`
- * URLs so the editor can load local images without a web server.
+ * Replace relative image sources in markdown content with absolute `media://`
+ * URLs so the editor can load local images via Electron's custom protocol.
  *
  * Handles:
  *   - HTML img tags:      src="relative/path"
@@ -51,7 +62,7 @@ export function resolveRelativeImagePaths(content: string, filePath: string): st
 
   const resolve = (src: string): string => {
     if (isAbsoluteUrl(src)) return src
-    return pathToFileUrl(`${dir}/${src}`)
+    return pathToMediaUrl(`${dir}/${src}`)
   }
 
   // 1. HTML img tags — src="..." or src='...'
@@ -72,7 +83,7 @@ export function resolveRelativeImagePaths(content: string, filePath: string): st
 // ── Unresolve (save-time) ─────────────────────────────────────────────────────
 
 /**
- * Reverse of resolveRelativeImagePaths.  Strips the `file://…/docDir/` prefix
+ * Reverse of resolveRelativeImagePaths.  Strips the `media://…/docDir/` prefix
  * from image sources so the markdown written to disk contains the original
  * relative paths and remains portable.
  */
@@ -80,7 +91,8 @@ export function unresolveRelativeImagePaths(content: string, filePath: string): 
   const dir = docDir(filePath)
   if (!dir) return content
 
-  const fileUrlPrefix = pathToFileUrl(dir) + '/'
+  // Strip the media:// prefix we added on load so saved files use relative paths.
+  const fileUrlPrefix = pathToMediaUrl(dir) + '/'
   const escapedPrefix = escRe(fileUrlPrefix)
 
   // HTML img tags

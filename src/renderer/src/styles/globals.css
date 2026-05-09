@@ -249,6 +249,18 @@ body,
   background: rgba(91, 108, 255, 0.15);
 }
 
+/* ── Inline images (badge rows, icon rows) ──────────────────────────────────
+   TipTap's Image extension is configured with inline:true so multiple <img>
+   elements in a single paragraph node sit side-by-side.  The rules below
+   also reset the prose `display:block` that @tailwindcss/typography applies
+   to all images, and vertically align them to the middle of the line.       */
+.ProseMirror p img,
+.ProseMirror p a img {
+  display: inline;
+  vertical-align: middle;
+  margin: 0 2px;
+}
+
 /* ── TXT mode — tight line spacing, no paragraph or list gaps ───────────── */
 /* Paragraphs are line-faithful (one node per line), so we strip prose margins
    to match what TextEdit / Notepad would show.                               */

@@ -254,17 +254,18 @@ export function Toolbar({ editor, onOpenFile, onSaveFile, onInsertImage }: Toolb
           <Sep />
           <TB label={`Link · ${mod}K`} active={editor.isActive('link')} onClick={() => setLinkDialogOpen(true)}><Link2 size={15} strokeWidth={1.6} /></TB>
           <TableWizard editor={editor}>
-            <Tip label="Insert table">
-              <button
-                className="titlebar-no-drag inline-flex items-center justify-center rounded transition-colors duration-100"
-                style={{ width: 28, height: 28, borderRadius: 6, background: 'transparent', border: 'none', color: 'var(--lm-ink-soft)', cursor: 'pointer' }}
-                onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.04)'}
-                onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-                aria-label="Insert table"
-              >
-                <Table size={15} strokeWidth={1.6} />
-              </button>
-            </Tip>
+            {/* Native button passed directly so Popover.Trigger asChild gets a
+                referenceable DOM element — avoids the React forwardRef warning */}
+            <button
+              className="titlebar-no-drag inline-flex items-center justify-center rounded transition-colors duration-100"
+              style={{ width: 28, height: 28, borderRadius: 6, background: 'transparent', border: 'none', color: 'var(--lm-ink-soft)', cursor: 'pointer' }}
+              onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.04)'}
+              onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+              aria-label="Insert table"
+              title="Insert table"
+            >
+              <Table size={15} strokeWidth={1.6} />
+            </button>
           </TableWizard>
           <TB label="Insert image" onClick={onInsertImage}><Image size={15} strokeWidth={1.6} /></TB>
         </>

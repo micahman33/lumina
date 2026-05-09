@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   docDir,
   pathToFileUrl,
+  pathToMediaUrl,
   resolveRelativeImagePaths,
   unresolveRelativeImagePaths,
 } from '../markdownUtils'
@@ -42,11 +43,27 @@ describe('pathToFileUrl', () => {
   })
 })
 
+// ── pathToMediaUrl ────────────────────────────────────────────────────────────
+
+describe('pathToMediaUrl', () => {
+  it('adds media:// prefix to unix paths', () => {
+    expect(pathToMediaUrl('/Users/alice/docs')).toBe('media:///Users/alice/docs')
+  })
+
+  it('adds media:/// prefix for Windows paths', () => {
+    expect(pathToMediaUrl('C:/Users/alice')).toBe('media:///C:/Users/alice')
+  })
+
+  it('normalises backslashes', () => {
+    expect(pathToMediaUrl('C:\\Users\\alice')).toBe('media:///C:/Users/alice')
+  })
+})
+
 // ── resolveRelativeImagePaths ─────────────────────────────────────────────────
 
 describe('resolveRelativeImagePaths', () => {
   const docPath = '/Users/alice/project/README.md'
-  const base = 'file:///Users/alice/project'
+  const base = 'media:///Users/alice/project'
 
   it('resolves relative src in HTML img tag', () => {
     const input = '<img src="build/icon.png" alt="icon" />'
@@ -66,6 +83,11 @@ describe('resolveRelativeImagePaths', () => {
 
   it('does not modify existing file:// URLs', () => {
     const input = '<img src="file:///absolute/path.png" />'
+    expect(resolveRelativeImagePaths(input, docPath)).toBe(input)
+  })
+
+  it('does not modify existing media:// URLs', () => {
+    const input = '<img src="media:///absolute/path.png" />'
     expect(resolveRelativeImagePaths(input, docPath)).toBe(input)
   })
 
@@ -121,7 +143,7 @@ describe('resolveRelativeImagePaths', () => {
 
 describe('unresolveRelativeImagePaths', () => {
   const docPath = '/Users/alice/project/README.md'
-  const base = 'file:///Users/alice/project'
+  const base = 'media:///Users/alice/project'
 
   it('strips file:// prefix from HTML img src', () => {
     const input = `<img src="${base}/build/icon.png" alt="icon" />`
