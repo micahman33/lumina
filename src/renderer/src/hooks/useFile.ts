@@ -3,6 +3,7 @@ import { useAppStore } from '../store/appStore'
 import type { Editor } from '@tiptap/react'
 import type { FileType } from '../types/file'
 import { buildTxtDoc, serializeTxtDoc, detectFileType, extractSnippet } from '../utils/txtUtils'
+import { resolveRelativeImagePaths, unresolveRelativeImagePaths } from '../utils/markdownUtils'
 
 // Re-export detectFileType for backward compatibility (other files import it from here)
 export { detectFileType } from '../utils/txtUtils'
@@ -35,13 +36,16 @@ export function useFile(editor: Editor | null): {
 
   /** Load content into TipTap, routing by file type. */
   const loadContent = useCallback(
-    (raw: string, fileType: FileType) => {
+    (raw: string, fileType: FileType, filePath?: string | null) => {
       if (!editor) return
       try {
         if (fileType === 'txt') {
           editor.commands.setContent(buildTxtDoc(raw))
         } else {
-          editor.commands.setContent(raw)
+          // Resolve relative image paths to file:// URLs so local images render.
+          // The reverse (unresolve) happens in getContent() before saving.
+          const content = filePath ? resolveRelativeImagePaths(raw, filePath) : raw
+          editor.commands.setContent(content)
         }
       } catch (err) {
         // Fallback: if the parsed doc is rejected by the ProseMirror schema,
@@ -60,10 +64,12 @@ export function useFile(editor: Editor | null): {
   /** Serialize editor content to the correct format for saving. */
   const getContent = useCallback((): string => {
     if (!editor) return ''
-    const fileType = useAppStore.getState().file.fileType
+    const { fileType, path } = useAppStore.getState().file
     if (fileType === 'txt') return serializeTxtDoc(editor.state.doc)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (editor.storage as any).markdown?.getMarkdown() ?? editor.getText()
+    const raw = (editor.storage as any).markdown?.getMarkdown() ?? editor.getText()
+    // Strip file:// absolute prefixes we added on load — restore original relative paths
+    return path ? unresolveRelativeImagePaths(raw, path) : raw
   }, [editor])
 
   const openFilePath = useCallback(
@@ -72,7 +78,7 @@ export function useFile(editor: Editor | null): {
       if (!result) return
       const fileType = detectFileType(result.path)
       setFile({ path: result.path, content: result.content, isDirty: false, fileType })
-      loadContent(result.content, fileType)
+      loadContent(result.content, fileType, result.path)
       await stableAddRecent(result.path, extractSnippet(result.content, fileType))
       document.title = `${result.path.split(/[/\\]/).pop()} — Lumina`
     },
@@ -90,7 +96,7 @@ export function useFile(editor: Editor | null): {
     if (!result) return
     const fileType = detectFileType(result.path)
     setFile({ path: result.path, content: result.content, isDirty: false, fileType })
-    loadContent(result.content, fileType)
+    loadContent(result.content, fileType, result.path)
     await stableAddRecent(result.path, extractSnippet(result.content, fileType))
     document.title = `${result.path.split(/[/\\]/).pop()} — Lumina`
   }, [setFile, loadContent, stableAddRecent])
@@ -134,7 +140,7 @@ export function useFile(editor: Editor | null): {
       if (!result) return
       const fileType = detectFileType(result.path)
       setFile({ path: result.path, content: result.content, isDirty: false, fileType })
-      loadContent(result.content, fileType)
+      loadContent(result.content, fileType, result.path)
       document.title = `${result.path.split(/[/\\]/).pop()} — Lumina`
       await window.api.addRecentFile(result.path, extractSnippet(result.content, fileType))
       const recents = await window.api.getRecentFiles()

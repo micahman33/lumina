@@ -15,7 +15,30 @@ const CodeBlockWithPicker = CodeBlockLowlight.extend({
     return ReactNodeViewRenderer(CodeBlockView)
   }
 }).configure({ lowlight, defaultLanguage: 'plaintext' })
-import { Image } from '@tiptap/extension-image'
+import { Image as BaseImage } from '@tiptap/extension-image'
+
+// Inline images so multiple <img> elements within a single <p> render on the
+// same line (critical for badge rows in READMEs).  Also adds width/height
+// attribute support so <img width="96"> renders at the correct size.
+const Image = BaseImage.extend({
+  inline: true,
+  group: 'inline',
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      width: {
+        default: null,
+        parseHTML: (el) => el.getAttribute('width'),
+        renderHTML: (attrs) => (attrs.width ? { width: attrs.width } : {}),
+      },
+      height: {
+        default: null,
+        parseHTML: (el) => el.getAttribute('height'),
+        renderHTML: (attrs) => (attrs.height ? { height: attrs.height } : {}),
+      },
+    }
+  },
+})
 import { Link } from '@tiptap/extension-link'
 import { Table } from '@tiptap/extension-table'
 import { TableRow } from '@tiptap/extension-table-row'
