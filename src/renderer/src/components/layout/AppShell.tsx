@@ -2,6 +2,7 @@ import { TitleBar } from './TitleBar'
 import { Sidebar } from './Sidebar'
 import { EditorPane } from '../editor/EditorPane'
 import { SettingsModal } from '../settings/SettingsModal'
+import { Toast } from '../ui/Toast'
 import { useAppStore } from '../../store/appStore'
 import type { Editor } from '@tiptap/react'
 
@@ -51,6 +52,7 @@ export function AppShell({ editor, onOpenFile, onSaveFile, onOpenFilePath, onNew
         <EditorPane editor={editor} onOpenFile={onOpenFile} onSaveFile={onSaveFile} />
       </div>
       <SettingsModal />
+      <Toast />
     </div>
   )
 }

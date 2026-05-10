@@ -69,6 +69,15 @@ const api = {
   // Exposed at startup — renderer cannot access process.platform directly
   platform: process.platform,
 
+  exportHtml: (args: { defaultPath: string; content: string }): Promise<{ path: string } | null> =>
+    ipcRenderer.invoke(IPC.EXPORT_HTML, args),
+
+  exportPdf: (args: { defaultPath: string }): Promise<{ path: string } | null> =>
+    ipcRenderer.invoke(IPC.EXPORT_PDF, args),
+
+  pasteImage: (args: { buffer: number[]; mimeType: string; documentPath: string | null }): Promise<string> =>
+    ipcRenderer.invoke(IPC.PASTE_IMAGE, args),
+
   getSpellSuggestions: (): Promise<{ misspelledWord: string; suggestions: string[] }> =>
     ipcRenderer.invoke(IPC.SPELL_GET),
 

@@ -167,4 +167,32 @@ export function registerFileHandlers(): void {
     const current = store.get('settings')
     store.set('settings', { ...current, ...partial })
   })
+
+  ipcMain.handle(IPC.EXPORT_HTML, async (_, args: { defaultPath: string; content: string }) => {
+    const win = BrowserWindow.getFocusedWindow()
+    const result = await dialog.showSaveDialog(win!, {
+      defaultPath: args.defaultPath,
+      filters: [{ name: 'HTML', extensions: ['html'] }],
+    })
+    if (result.canceled || !result.filePath) return null
+    await writeFile(result.filePath, args.content, 'utf8')
+    return { path: result.filePath }
+  })
+
+  ipcMain.handle(IPC.EXPORT_PDF, async (_, args: { defaultPath: string }) => {
+    const win = BrowserWindow.getFocusedWindow()
+    if (!win) return null
+    const result = await dialog.showSaveDialog(win, {
+      defaultPath: args.defaultPath,
+      filters: [{ name: 'PDF', extensions: ['pdf'] }],
+    })
+    if (result.canceled || !result.filePath) return null
+    const data = await win.webContents.printToPDF({
+      printBackground: true,
+      pageSize: 'A4',
+      margins: { top: 25, bottom: 25, left: 20, right: 20 },
+    })
+    await writeFile(result.filePath, data)
+    return { path: result.filePath }
+  })
 }

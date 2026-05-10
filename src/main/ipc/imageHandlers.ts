@@ -1,7 +1,6 @@
-import { ipcMain, protocol } from 'electron'
-import { copyFile, mkdir, access, readFile } from 'fs/promises'
+import { ipcMain, protocol, app } from 'electron'
+import { copyFile, mkdir, access, readFile, writeFile } from 'fs/promises'
 import { basename, dirname, join, extname } from 'path'
-import { pathToFileURL } from 'url'
 import { IPC } from '../../renderer/src/types/ipc'
 import type { CopyImageArgs } from '../../renderer/src/types/file'
 
@@ -68,6 +67,15 @@ export function registerMediaProtocol(): void {
   })
 }
 
+const MIME_TO_EXT: Record<string, string> = {
+  'image/png':  '.png',
+  'image/jpeg': '.jpg',
+  'image/gif':  '.gif',
+  'image/webp': '.webp',
+  'image/bmp':  '.bmp',
+  'image/svg+xml': '.svg',
+}
+
 export function registerImageHandlers(): void {
   ipcMain.handle(IPC.IMAGE_COPY_TO_DOC, async (_, args: CopyImageArgs): Promise<string> => {
     const { sourcePath, documentPath } = args
@@ -81,7 +89,37 @@ export function registerImageHandlers(): void {
 
     await copyFile(sourcePath, destPath)
 
-    // Return a media:// URL so the renderer can display it immediately
-    return pathToFileURL(destPath).href.replace('file://', 'media://')
+    // Return a media://local/<abs-path> URL so the renderer can display it immediately.
+    // We use the "local" dummy host to prevent Chromium from stealing the first path
+    // segment as a hostname when the scheme is registered as standard:true.
+    const normalized = destPath.replace(/\\/g, '/')
+    const absPath = normalized.startsWith('/') ? normalized : '/' + normalized
+    return `media://local${absPath}`
   })
+
+  ipcMain.handle(
+    IPC.PASTE_IMAGE,
+    async (_, args: { buffer: number[]; mimeType: string; documentPath: string | null }): Promise<string> => {
+      const { buffer, mimeType, documentPath } = args
+      const ext = MIME_TO_EXT[mimeType] ?? '.png'
+      const filename = `pasted_${Date.now()}${ext}`
+      const data = Buffer.from(buffer)
+
+      let destPath: string
+      if (documentPath) {
+        const docDir = dirname(documentPath)
+        const imagesDir = join(docDir, 'images')
+        await mkdir(imagesDir, { recursive: true })
+        destPath = await findAvailablePath(imagesDir, filename)
+      } else {
+        const tempDir = app.getPath('temp')
+        destPath = join(tempDir, filename)
+      }
+
+      await writeFile(destPath, data)
+      const normalized = destPath.replace(/\\/g, '/')
+      const absPath = normalized.startsWith('/') ? normalized : '/' + normalized
+      return `media://local${absPath}`
+    }
+  )
 }

@@ -6,7 +6,7 @@ import {
   List, ListOrdered, ListTodo,
   Quote, Table, Image, Settings, FolderOpen, Save,
   PanelLeftOpen, ChevronDown, Link2, Undo2, Redo2, Minus,
-  Maximize2
+  Maximize2, Download
 } from 'lucide-react'
 import { TableWizard } from '../table/TableWizard'
 import type { Editor } from '@tiptap/react'
@@ -17,6 +17,8 @@ interface ToolbarProps {
   onOpenFile: () => void
   onSaveFile: () => void
   onInsertImage: () => void
+  onExportHtml: () => void
+  onExportPdf: () => void
 }
 
 function getFormatLabel(editor: Editor): string {
@@ -107,7 +109,7 @@ function Sep(): JSX.Element {
   )
 }
 
-export function Toolbar({ editor, onOpenFile, onSaveFile, onInsertImage }: ToolbarProps): JSX.Element {
+export function Toolbar({ editor, onOpenFile, onSaveFile, onInsertImage, onExportHtml, onExportPdf }: ToolbarProps): JSX.Element {
   const toggleSidebar = useAppStore((s) => s.toggleSidebar)
   const setSettingsOpen = useAppStore((s) => s.setSettingsOpen)
   const setLinkDialogOpen = useAppStore((s) => s.setLinkDialogOpen)
@@ -275,6 +277,59 @@ export function Toolbar({ editor, onOpenFile, onSaveFile, onInsertImage }: Toolb
           <TB label="Insert image" onClick={onInsertImage}><Image size={15} strokeWidth={1.6} /></TB>
         </>
       )}
+
+      {/* Export dropdown */}
+      <Sep />
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger asChild>
+          <button
+            className="titlebar-no-drag inline-flex items-center gap-1 rounded transition-colors duration-100"
+            style={{
+              height: 28, padding: '0 8px',
+              borderRadius: 6,
+              border: '1px solid var(--lm-border)',
+              background: 'rgba(0,0,0,0.015)',
+              fontSize: 12, fontWeight: 500,
+              color: 'var(--lm-ink-soft)',
+              cursor: 'pointer',
+              gap: 4,
+            }}
+            aria-label="Export"
+            title="Export"
+          >
+            <Download size={13} strokeWidth={1.6} />
+            <span style={{ fontSize: 12 }}>Export</span>
+            <ChevronDown size={9} strokeWidth={1.5} style={{ color: 'var(--lm-ink-faint)' }} />
+          </button>
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content
+            className="z-50 rounded-lg shadow-xl py-1"
+            style={{ background: 'var(--lm-chrome)', border: '1px solid var(--lm-border)', minWidth: 160 }}
+            sideOffset={4}
+            align="end"
+          >
+            <DropdownMenu.Item
+              onSelect={onExportHtml}
+              className="flex items-center px-4 outline-none cursor-pointer"
+              style={{ padding: '7px 14px', fontSize: 13, color: 'var(--lm-ink)' }}
+              onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(91,108,255,0.08)'}
+              onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+            >
+              Export as HTML
+            </DropdownMenu.Item>
+            <DropdownMenu.Item
+              onSelect={onExportPdf}
+              className="flex items-center px-4 outline-none cursor-pointer"
+              style={{ padding: '7px 14px', fontSize: 13, color: 'var(--lm-ink)' }}
+              onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(91,108,255,0.08)'}
+              onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+            >
+              Export as PDF
+            </DropdownMenu.Item>
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
 
       {/* Spacer */}
       <div style={{ flex: 1 }} />

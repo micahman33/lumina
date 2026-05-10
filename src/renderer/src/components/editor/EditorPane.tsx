@@ -7,6 +7,7 @@ import { FindReplacePanel } from './FindReplacePanel'
 import { CommandPalette } from './CommandPalette'
 import { OutlinePanel } from './OutlinePanel'
 import { useAppStore } from '../../store/appStore'
+import { useExport } from '../../hooks/useExport'
 
 interface EditorPaneProps {
   editor: Editor
@@ -33,6 +34,8 @@ export function EditorPane({
   const handleSaveFileAs = onSaveFileAs ?? (() => {})
   const handleNewFile = onNewFile ?? (() => {})
 
+  const { exportHtml, exportPdf } = useExport(editor)
+
   const outlineOpen = useAppStore((s) => s.outlineOpen)
   const focusMode = useAppStore((s) => s.focusMode)
 
@@ -50,7 +53,7 @@ export function EditorPane({
           flexShrink: 0,
         }}
       >
-        <Toolbar editor={editor} onOpenFile={onOpenFile} onSaveFile={onSaveFile} onInsertImage={onInsertImage} />
+        <Toolbar editor={editor} onOpenFile={onOpenFile} onSaveFile={onSaveFile} onInsertImage={onInsertImage} onExportHtml={exportHtml} onExportPdf={exportPdf} />
       </div>
 
       {/* relative wrapper so FindReplacePanel can position absolutely within the editor area */}
@@ -86,6 +89,8 @@ export function EditorPane({
         onSaveFile={onSaveFile}
         onSaveFileAs={handleSaveFileAs}
         onNewFile={handleNewFile}
+        onExportHtml={exportHtml}
+        onExportPdf={exportPdf}
       />
     </div>
   )

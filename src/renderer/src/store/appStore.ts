@@ -13,6 +13,7 @@ interface AppState {
   commandPaletteOpen: boolean
   outlineOpen: boolean
   focusMode: boolean
+  toast: { message: string; type: 'success' | 'error' } | null
 
   setFile: (file: Partial<FileState>) => void
   markDirty: (dirty: boolean) => void
@@ -27,6 +28,8 @@ interface AppState {
   setCommandPaletteOpen: (open: boolean) => void
   setOutlineOpen: (open: boolean) => void
   setFocusMode: (on: boolean) => void
+  showToast: (message: string, type: 'success' | 'error') => void
+  dismissToast: () => void
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -41,6 +44,7 @@ export const useAppStore = create<AppState>((set) => ({
   commandPaletteOpen: false,
   outlineOpen: false,
   focusMode: false,
+  toast: null,
 
   setFile: (partial) =>
     set((state) => ({ file: { ...state.file, ...partial } })),
@@ -63,4 +67,6 @@ export const useAppStore = create<AppState>((set) => ({
   setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
   setOutlineOpen: (open) => set({ outlineOpen: open }),
   setFocusMode: (on) => set({ focusMode: on }),
+  showToast: (message, type) => set({ toast: { message, type } }),
+  dismissToast: () => set({ toast: null }),
 }))

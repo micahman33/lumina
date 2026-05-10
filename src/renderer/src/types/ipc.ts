@@ -16,6 +16,11 @@ export const IPC = {
   // Spell-check
   SPELL_GET: 'spell:get-suggestions',
   SPELL_REPLACE: 'spell:replace',
+  // Export
+  EXPORT_HTML: 'export:html',
+  EXPORT_PDF: 'export:pdf',
+  // Image paste
+  PASTE_IMAGE: 'image:paste',
   // Push from main → renderer
   PUSH_OPEN_FILE: 'push:open-file',
   PUSH_MENU_SAVE: 'push:menu-save',

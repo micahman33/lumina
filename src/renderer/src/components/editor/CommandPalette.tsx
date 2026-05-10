@@ -29,6 +29,7 @@ import {
   Clock,
   Maximize2,
   Minimize2,
+  Download,
   LucideIcon,
 } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
@@ -120,6 +121,8 @@ interface CommandContext {
   onSaveFile: () => void
   onSaveFileAs: () => void
   onNewFile: () => void
+  onExportHtml: () => void
+  onExportPdf: () => void
 }
 
 const STATIC_COMMANDS: CommandDef[] = [
@@ -156,8 +159,24 @@ const STATIC_COMMANDS: CommandDef[] = [
     label: 'Save As',
     category: 'file',
     icon: SaveAll,
-    keywords: ['save as', 'export'],
+    keywords: ['save as'],
     action: ({ onSaveFileAs }) => onSaveFileAs(),
+  },
+  {
+    id: 'file:export-html',
+    label: 'Export as HTML',
+    category: 'file',
+    icon: Download,
+    keywords: ['export', 'html', 'web'],
+    action: ({ onExportHtml }) => onExportHtml(),
+  },
+  {
+    id: 'file:export-pdf',
+    label: 'Export as PDF',
+    category: 'file',
+    icon: Download,
+    keywords: ['export', 'pdf', 'print'],
+    action: ({ onExportPdf }) => onExportPdf(),
   },
 
   // ── Format ──────────────────────────────────────────────────────────────
@@ -409,6 +428,8 @@ interface CommandPaletteProps {
   onSaveFile: () => void
   onSaveFileAs: () => void
   onNewFile: () => void
+  onExportHtml: () => void
+  onExportPdf: () => void
 }
 
 export function CommandPalette({
@@ -417,6 +438,8 @@ export function CommandPalette({
   onSaveFile,
   onSaveFileAs,
   onNewFile,
+  onExportHtml,
+  onExportPdf,
 }: CommandPaletteProps): JSX.Element | null {
   const commandPaletteOpen = useAppStore((s) => s.commandPaletteOpen)
   const setCommandPaletteOpen = useAppStore((s) => s.setCommandPaletteOpen)
@@ -467,10 +490,10 @@ export function CommandPalette({
   const execute = useCallback(
     (cmd: CommandDef) => {
       close()
-      const ctx: CommandContext = { editor, onOpenFile, onSaveFile, onSaveFileAs, onNewFile }
+      const ctx: CommandContext = { editor, onOpenFile, onSaveFile, onSaveFileAs, onNewFile, onExportHtml, onExportPdf }
       cmd.action(ctx)
     },
-    [close, editor, onOpenFile, onSaveFile, onSaveFileAs, onNewFile]
+    [close, editor, onOpenFile, onSaveFile, onSaveFileAs, onNewFile, onExportHtml, onExportPdf]
   )
 
   const handleKeyDown = useCallback(

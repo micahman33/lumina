@@ -51,6 +51,28 @@ export function EditorCore({ editor, insertImageRef, focusMode }: EditorCoreProp
     [editor]
   )
 
+  const handlePaste = useCallback(
+    async (e: React.ClipboardEvent<HTMLDivElement>) => {
+      const items = e.clipboardData?.items
+      if (!items) return
+      const imageItem = Array.from(items).find((item) => item.type.startsWith('image/'))
+      if (!imageItem) return
+
+      e.preventDefault()
+      const file = imageItem.getAsFile()
+      if (!file) return
+
+      const mimeType = imageItem.type
+      const documentPath = useAppStore.getState().file.path
+
+      const ab = await file.arrayBuffer()
+      const buffer = Array.from(new Uint8Array(ab))
+      const mediaUrl = await window.api.pasteImage({ buffer, mimeType, documentPath })
+      editor.chain().focus().setImage({ src: mediaUrl }).run()
+    },
+    [editor]
+  )
+
   // Define handleInsertImage BEFORE useEffect that references it
   const handleInsertImage = useCallback(() => {
     const input = document.createElement('input')
@@ -94,6 +116,7 @@ export function EditorCore({ editor, insertImageRef, focusMode }: EditorCoreProp
       className={`flex-1 overflow-y-auto lm-bg${fileType === 'txt' ? ' txt-mode' : ''}${focusMode ? ' focus-mode-editor' : ''}`}
       onDrop={handleDrop}
       onDragOver={(e) => e.preventDefault()}
+      onPaste={handlePaste}
       onContextMenu={handleContextMenu}
     >
       <EditorContent editor={editor} className="h-full" />
