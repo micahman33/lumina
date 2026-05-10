@@ -10,6 +10,7 @@ interface AppState {
   linkDialogOpen: boolean
   findReplaceOpen: boolean
   sidebarSearch: string
+  commandPaletteOpen: boolean
 
   setFile: (file: Partial<FileState>) => void
   markDirty: (dirty: boolean) => void
@@ -21,6 +22,7 @@ interface AppState {
   setLinkDialogOpen: (open: boolean) => void
   setFindReplaceOpen: (open: boolean) => void
   setSidebarSearch: (q: string) => void
+  setCommandPaletteOpen: (open: boolean) => void
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -32,6 +34,7 @@ export const useAppStore = create<AppState>((set) => ({
   linkDialogOpen: false,
   findReplaceOpen: false,
   sidebarSearch: '',
+  commandPaletteOpen: false,
 
   setFile: (partial) =>
     set((state) => ({ file: { ...state.file, ...partial } })),
@@ -50,5 +53,6 @@ export const useAppStore = create<AppState>((set) => ({
   setSettingsOpen: (open) => set({ settingsOpen: open }),
   setLinkDialogOpen: (open) => set({ linkDialogOpen: open }),
   setFindReplaceOpen: (open) => set({ findReplaceOpen: open }),
-  setSidebarSearch: (q) => set({ sidebarSearch: q })
+  setSidebarSearch: (q) => set({ sidebarSearch: q }),
+  setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
 }))

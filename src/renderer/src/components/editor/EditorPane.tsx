@@ -4,20 +4,32 @@ import { Toolbar } from './Toolbar'
 import { EditorCore } from './EditorCore'
 import { StatusBar } from './StatusBar'
 import { FindReplacePanel } from './FindReplacePanel'
+import { CommandPalette } from './CommandPalette'
 
 interface EditorPaneProps {
   editor: Editor
   onOpenFile: () => void
   onSaveFile: () => void
+  onSaveFileAs?: () => void
+  onNewFile?: () => void
 }
 
-export function EditorPane({ editor, onOpenFile, onSaveFile }: EditorPaneProps): JSX.Element {
+export function EditorPane({
+  editor,
+  onOpenFile,
+  onSaveFile,
+  onSaveFileAs,
+  onNewFile,
+}: EditorPaneProps): JSX.Element {
   // Shared image-insert handler — EditorCore exposes it via ref so Toolbar can call it too
   const insertImageRef = useRef<() => void>(() => {})
 
   const onInsertImage = useCallback(() => {
     insertImageRef.current()
   }, [])
+
+  const handleSaveFileAs = onSaveFileAs ?? (() => {})
+  const handleNewFile = onNewFile ?? (() => {})
 
   return (
     <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
@@ -28,6 +40,13 @@ export function EditorPane({ editor, onOpenFile, onSaveFile }: EditorPaneProps):
         <EditorCore editor={editor} insertImageRef={insertImageRef} />
       </div>
       <StatusBar editor={editor} />
+      <CommandPalette
+        editor={editor}
+        onOpenFile={onOpenFile}
+        onSaveFile={onSaveFile}
+        onSaveFileAs={handleSaveFileAs}
+        onNewFile={handleNewFile}
+      />
     </div>
   )
 }

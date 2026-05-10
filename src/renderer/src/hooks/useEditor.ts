@@ -51,8 +51,8 @@ import { TextAlign } from '@tiptap/extension-text-align'
 import { useAppStore } from '../store/appStore'
 import { SearchAndReplace } from '../extensions/searchAndReplace'
 
-const LinkShortcut = Extension.create({
-  name: 'linkShortcut',
+const AppShortcuts = Extension.create({
+  name: 'appShortcuts',
   addKeyboardShortcuts() {
     return {
       'Mod-k': () => {
@@ -61,6 +61,10 @@ const LinkShortcut = Extension.create({
       },
       'Mod-f': () => {
         useAppStore.getState().setFindReplaceOpen(true)
+        return true
+      },
+      'Mod-p': () => {
+        useAppStore.getState().setCommandPaletteOpen(true)
         return true
       }
     }
@@ -137,7 +141,7 @@ export function useEditor() {
       TaskItem.configure({
         nested: true
       }),
-      LinkShortcut,
+      AppShortcuts,
       SearchAndReplace,
     ],
     content: '',
