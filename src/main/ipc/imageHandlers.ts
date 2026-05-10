@@ -42,17 +42,22 @@ async function findAvailablePath(dir: string, filename: string): Promise<string>
 
 export function registerMediaProtocol(): void {
   // Use readFile instead of net.fetch(file://) — net.fetch on file:// URLs can
-  // return ERR_UNEXPECTED in Electron's renderer webSecurity context.  Reading
-  // the bytes directly in the main process is reliable and avoids the issue.
+  // return ERR_UNEXPECTED in Electron's renderer webSecurity context.
+  //
+  // IMPORTANT: the scheme is registered as `standard: true`, so Chromium
+  // normalises media:///abs/path to media://localhost/abs/path internally.
+  // Using new URL(request.url).pathname correctly extracts "/abs/path"
+  // regardless of whether a host is present — slice('media://'.length) would
+  // incorrectly include "localhost" in the path and cause readFile to fail.
   protocol.handle('media', async (request) => {
+    let filePath = ''
     try {
-      // media:///abs/path → strip "media://" to get the absolute OS path
-      const filePath = decodeURIComponent(request.url.slice('media://'.length))
+      filePath = decodeURIComponent(new URL(request.url).pathname)
       const data = await readFile(filePath)
       const mime = MIME_MAP[extname(filePath).toLowerCase()] ?? 'application/octet-stream'
       return new Response(data, { headers: { 'Content-Type': mime } })
     } catch (err) {
-      console.error('[Lumina] media:// protocol error:', err)
+      console.error('[Lumina] media:// protocol error for path:', filePath, err)
       return new Response('not found', { status: 404 })
     }
   })
