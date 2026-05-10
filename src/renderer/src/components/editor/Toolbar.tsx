@@ -5,7 +5,8 @@ import {
   Bold, Italic, Strikethrough, Code, Code2,
   List, ListOrdered, ListTodo,
   Quote, Table, Image, Settings, FolderOpen, Save,
-  PanelLeftOpen, ChevronDown, Link2, Undo2, Redo2, Minus
+  PanelLeftOpen, ChevronDown, Link2, Undo2, Redo2, Minus,
+  Maximize2
 } from 'lucide-react'
 import { TableWizard } from '../table/TableWizard'
 import type { Editor } from '@tiptap/react'
@@ -111,6 +112,10 @@ export function Toolbar({ editor, onOpenFile, onSaveFile, onInsertImage }: Toolb
   const setSettingsOpen = useAppStore((s) => s.setSettingsOpen)
   const setLinkDialogOpen = useAppStore((s) => s.setLinkDialogOpen)
   const fileType = useAppStore((s) => s.file.fileType)
+  const outlineOpen = useAppStore((s) => s.outlineOpen)
+  const setOutlineOpen = useAppStore((s) => s.setOutlineOpen)
+  const focusMode = useAppStore((s) => s.focusMode)
+  const setFocusMode = useAppStore((s) => s.setFocusMode)
   const isMd = fileType === 'md'
   const isMac = navigator.platform.toLowerCase().includes('mac')
   const mod = isMac ? '⌘' : 'Ctrl'
@@ -278,6 +283,14 @@ export function Toolbar({ editor, onOpenFile, onSaveFile, onInsertImage }: Toolb
       <span style={{ fontSize: 11, color: 'var(--lm-ink-faint)', fontFamily: 'ui-monospace, monospace', marginRight: 8, whiteSpace: 'nowrap' }}>
         {wordStr} · {readingMins} min
       </span>
+
+      {/* Outline + Focus mode */}
+      <TB label={`Toggle outline · ${mod}⇧O`} active={outlineOpen} onClick={() => setOutlineOpen(!outlineOpen)}>
+        <List size={15} strokeWidth={1.6} />
+      </TB>
+      <TB label={`Focus mode · ${mod}⇧↵`} active={focusMode} onClick={() => setFocusMode(!focusMode)}>
+        <Maximize2 size={15} strokeWidth={1.6} />
+      </TB>
 
       {/* Settings */}
       <TB label="Settings" onClick={() => setSettingsOpen(true)}><Settings size={15} strokeWidth={1.6} /></TB>

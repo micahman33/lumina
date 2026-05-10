@@ -27,6 +27,8 @@ import {
   Moon,
   Monitor,
   Clock,
+  Maximize2,
+  Minimize2,
   LucideIcon,
 } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
@@ -309,6 +311,18 @@ const STATIC_COMMANDS: CommandDef[] = [
     action: () => useAppStore.getState().toggleSidebar(),
   },
   {
+    id: 'view:toggle-outline',
+    label: 'Toggle Outline',
+    category: 'view',
+    icon: List,
+    shortcut: '⌘⇧O',
+    keywords: ['outline', 'headings', 'panel', 'toggle'],
+    action: () => {
+      const { outlineOpen, setOutlineOpen } = useAppStore.getState()
+      setOutlineOpen(!outlineOpen)
+    },
+  },
+  {
     id: 'view:find-replace',
     label: 'Find & Replace',
     category: 'view',
@@ -407,6 +421,7 @@ export function CommandPalette({
   const commandPaletteOpen = useAppStore((s) => s.commandPaletteOpen)
   const setCommandPaletteOpen = useAppStore((s) => s.setCommandPaletteOpen)
   const recentFiles = useAppStore((s) => s.recentFiles)
+  const focusMode = useAppStore((s) => s.focusMode)
 
   const [query, setQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
@@ -414,7 +429,20 @@ export function CommandPalette({
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
-  const allCommands = [...STATIC_COMMANDS, ...buildRecentCommands(recentFiles)]
+  const focusModeCommand: CommandDef = {
+    id: 'view:focus-mode',
+    label: focusMode ? 'Exit Focus Mode' : 'Enter Focus Mode',
+    category: 'view',
+    icon: focusMode ? Minimize2 : Maximize2,
+    shortcut: '⌘⇧↵',
+    keywords: ['focus', 'distraction free', 'writing', 'zen'],
+    action: () => {
+      const { focusMode: current, setFocusMode } = useAppStore.getState()
+      setFocusMode(!current)
+    },
+  }
+
+  const allCommands = [...STATIC_COMMANDS, focusModeCommand, ...buildRecentCommands(recentFiles)]
   const results = filterAndSort(query, allCommands)
 
   // Reset state when opening

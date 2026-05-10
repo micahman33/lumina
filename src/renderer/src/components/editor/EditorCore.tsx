@@ -10,9 +10,10 @@ import { LinkDialog } from './LinkDialog'
 interface EditorCoreProps {
   editor: Editor
   insertImageRef: MutableRefObject<() => void>
+  focusMode?: boolean
 }
 
-export function EditorCore({ editor, insertImageRef }: EditorCoreProps): JSX.Element {
+export function EditorCore({ editor, insertImageRef, focusMode }: EditorCoreProps): JSX.Element {
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({ x: 0, y: 0, visible: false })
   const fileType = useAppStore((s) => s.file.fileType)
 
@@ -90,7 +91,7 @@ export function EditorCore({ editor, insertImageRef }: EditorCoreProps): JSX.Ele
 
   return (
     <div
-      className={`flex-1 overflow-y-auto lm-bg${fileType === 'txt' ? ' txt-mode' : ''}`}
+      className={`flex-1 overflow-y-auto lm-bg${fileType === 'txt' ? ' txt-mode' : ''}${focusMode ? ' focus-mode-editor' : ''}`}
       onDrop={handleDrop}
       onDragOver={(e) => e.preventDefault()}
       onContextMenu={handleContextMenu}

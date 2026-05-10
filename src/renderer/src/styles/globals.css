@@ -261,6 +261,12 @@ body,
   margin: 0 2px;
 }
 
+/* ── Focus mode — narrow canvas, more breathing room ───────────────────── */
+.focus-mode-editor .ProseMirror {
+  max-width: 65ch;
+  padding-top: 80px;
+}
+
 /* ── TXT mode — tight line spacing, no paragraph or list gaps ───────────── */
 /* Paragraphs are line-faithful (one node per line), so we strip prose margins
    to match what TextEdit / Notepad would show.                               */

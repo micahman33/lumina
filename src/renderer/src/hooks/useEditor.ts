@@ -66,7 +66,17 @@ const AppShortcuts = Extension.create({
       'Mod-Shift-p': () => {
         useAppStore.getState().setCommandPaletteOpen(true)
         return true
-      }
+      },
+      'Mod-Shift-o': () => {
+        const { outlineOpen, setOutlineOpen } = useAppStore.getState()
+        setOutlineOpen(!outlineOpen)
+        return true
+      },
+      'Mod-Shift-Enter': () => {
+        const { focusMode, setFocusMode } = useAppStore.getState()
+        setFocusMode(!focusMode)
+        return true
+      },
     }
   }
 })

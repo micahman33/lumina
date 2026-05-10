@@ -11,6 +11,8 @@ interface AppState {
   findReplaceOpen: boolean
   sidebarSearch: string
   commandPaletteOpen: boolean
+  outlineOpen: boolean
+  focusMode: boolean
 
   setFile: (file: Partial<FileState>) => void
   markDirty: (dirty: boolean) => void
@@ -23,6 +25,8 @@ interface AppState {
   setFindReplaceOpen: (open: boolean) => void
   setSidebarSearch: (q: string) => void
   setCommandPaletteOpen: (open: boolean) => void
+  setOutlineOpen: (open: boolean) => void
+  setFocusMode: (on: boolean) => void
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -35,6 +39,8 @@ export const useAppStore = create<AppState>((set) => ({
   findReplaceOpen: false,
   sidebarSearch: '',
   commandPaletteOpen: false,
+  outlineOpen: false,
+  focusMode: false,
 
   setFile: (partial) =>
     set((state) => ({ file: { ...state.file, ...partial } })),
@@ -55,4 +61,6 @@ export const useAppStore = create<AppState>((set) => ({
   setFindReplaceOpen: (open) => set({ findReplaceOpen: open }),
   setSidebarSearch: (q) => set({ sidebarSearch: q }),
   setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
+  setOutlineOpen: (open) => set({ outlineOpen: open }),
+  setFocusMode: (on) => set({ focusMode: on }),
 }))
