@@ -47,16 +47,16 @@ describe('pathToFileUrl', () => {
 // ── pathToMediaUrl ────────────────────────────────────────────────────────────
 
 describe('pathToMediaUrl', () => {
-  it('adds media:// prefix to unix paths', () => {
-    expect(pathToMediaUrl('/Users/alice/docs')).toBe('media:///Users/alice/docs')
+  it('adds media://local/ prefix to unix paths', () => {
+    expect(pathToMediaUrl('/Users/alice/docs')).toBe('media://local/Users/alice/docs')
   })
 
-  it('adds media:/// prefix for Windows paths', () => {
-    expect(pathToMediaUrl('C:/Users/alice')).toBe('media:///C:/Users/alice')
+  it('adds media://local/ prefix for Windows paths', () => {
+    expect(pathToMediaUrl('C:/Users/alice')).toBe('media://local/C:/Users/alice')
   })
 
   it('normalises backslashes', () => {
-    expect(pathToMediaUrl('C:\\Users\\alice')).toBe('media:///C:/Users/alice')
+    expect(pathToMediaUrl('C:\\Users\\alice')).toBe('media://local/C:/Users/alice')
   })
 })
 
@@ -110,7 +110,7 @@ describe('normalizeAlignAttributes', () => {
 
 describe('resolveRelativeImagePaths', () => {
   const docPath = '/Users/alice/project/README.md'
-  const base = 'media:///Users/alice/project'
+  const base = 'media://local/Users/alice/project'
 
   it('resolves relative src in HTML img tag', () => {
     const input = '<img src="build/icon.png" alt="icon" />'
@@ -134,7 +134,7 @@ describe('resolveRelativeImagePaths', () => {
   })
 
   it('does not modify existing media:// URLs', () => {
-    const input = '<img src="media:///absolute/path.png" />'
+    const input = '<img src="media://local/absolute/path.png" />'
     expect(resolveRelativeImagePaths(input, docPath)).toBe(input)
   })
 
@@ -190,7 +190,7 @@ describe('resolveRelativeImagePaths', () => {
 
 describe('unresolveRelativeImagePaths', () => {
   const docPath = '/Users/alice/project/README.md'
-  const base = 'media:///Users/alice/project'
+  const base = 'media://local/Users/alice/project'
 
   it('strips file:// prefix from HTML img src', () => {
     const input = `<img src="${base}/build/icon.png" alt="icon" />`

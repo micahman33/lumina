@@ -52,12 +52,17 @@ export function registerMediaProtocol(): void {
   protocol.handle('media', async (request) => {
     let filePath = ''
     try {
+      // URL format: media://local/abs/path  (dummy host "local" prevents Chromium
+      // from stealing the first path segment as the hostname when standard:true)
       filePath = decodeURIComponent(new URL(request.url).pathname)
+      // On Windows, URL.pathname starts with an extra / before the drive letter
+      // (e.g. /C:/Users/...) — strip it so Node.js opens the correct path.
+      if (/^\/[A-Za-z]:[\\/]/.test(filePath)) filePath = filePath.slice(1)
       const data = await readFile(filePath)
       const mime = MIME_MAP[extname(filePath).toLowerCase()] ?? 'application/octet-stream'
       return new Response(data, { headers: { 'Content-Type': mime } })
     } catch (err) {
-      console.error('[Lumina] media:// protocol error for path:', filePath, err)
+      console.error('[Lumina] media:// error for:', filePath, err)
       return new Response('not found', { status: 404 })
     }
   })

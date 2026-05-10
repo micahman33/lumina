@@ -29,11 +29,21 @@ export function pathToFileUrl(absPath: string): string {
  * Convert an absolute OS path to a `media://` URL served by Electron's custom
  * protocol handler.  We use `media://` (not `file://`) for local images because
  * Electron's webSecurity blocks `file://` URLs in the renderer process.
+ *
+ * URL format: `media://local<absPath>`
+ *
+ * The dummy host `local` is required because the `media` scheme is registered
+ * with `standard:true`, which makes Chromium parse it like an HTTP URL.
+ * Without an explicit host, `media:///Users/alice/...` gets normalised to
+ * `media://users/alice/...` — Chromium steals the first path segment as the
+ * (lowercased) hostname and truncates the real path.  Using `media://local/`
+ * keeps the full path intact in `URL.pathname`.
  */
 export function pathToMediaUrl(absPath: string): string {
   const normalized = absPath.replace(/\\/g, '/')
-  // On Windows paths start with a drive letter (C:/...), on Unix with /
-  return normalized.startsWith('/') ? `media://${normalized}` : `media:///${normalized}`
+  // Ensure the path starts with / so it appends cleanly after the host
+  const path = normalized.startsWith('/') ? normalized : '/' + normalized
+  return `media://local${path}`
 }
 
 /** True if a src value is already an absolute URL that doesn't need resolving. */
