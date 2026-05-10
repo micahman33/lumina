@@ -63,7 +63,7 @@ const AppShortcuts = Extension.create({
         useAppStore.getState().setFindReplaceOpen(true)
         return true
       },
-      'Mod-p': () => {
+      'Mod-Shift-p': () => {
         useAppStore.getState().setCommandPaletteOpen(true)
         return true
       }
