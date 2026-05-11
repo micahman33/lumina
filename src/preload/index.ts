@@ -57,6 +57,12 @@ const api = {
     return () => ipcRenderer.removeListener(IPC.PUSH_MENU_SAVE, handler)
   },
 
+  onMenuSaveAs: (callback: () => void): (() => void) => {
+    const handler = (): void => callback()
+    ipcRenderer.on(IPC.PUSH_MENU_SAVE_AS, handler)
+    return () => ipcRenderer.removeListener(IPC.PUSH_MENU_SAVE_AS, handler)
+  },
+
   onThemeChange: (callback: (theme: 'light' | 'dark') => void): (() => void) => {
     const handler = (_: Electron.IpcRendererEvent, theme: 'light' | 'dark'): void =>
       callback(theme)

@@ -130,12 +130,13 @@ export function useFile(editor: Editor | null): {
   // Menu-triggered open / save
   useEffect(() => {
     const unsubSave = window.api.onMenuSave(() => saveFile())
+    const unsubSaveAs = window.api.onMenuSaveAs(() => saveFileAs())
     const unsubOpen = window.api.onOpenFile((path) => {
       if (path === null) newFile()
       else openFilePath(path)
     })
-    return () => { unsubSave(); unsubOpen() }
-  }, [saveFile, openFilePath, newFile])
+    return () => { unsubSave(); unsubSaveAs(); unsubOpen() }
+  }, [saveFile, saveFileAs, openFilePath, newFile])
 
   // Load initial file (CLI / most recent / welcome)
   useEffect(() => {

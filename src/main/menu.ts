@@ -74,7 +74,7 @@ export function buildMenu(win: BrowserWindow): void {
         {
           label: 'Save As…',
           accelerator: 'CmdOrCtrl+Shift+S',
-          click: () => win.webContents.send(IPC.PUSH_MENU_SAVE)
+          click: () => win.webContents.send(IPC.PUSH_MENU_SAVE_AS)
         },
         { type: 'separator' },
         isMac ? { role: 'close' as const } : { role: 'quit' as const }

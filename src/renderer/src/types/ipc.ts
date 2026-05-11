@@ -24,6 +24,7 @@ export const IPC = {
   // Push from main → renderer
   PUSH_OPEN_FILE: 'push:open-file',
   PUSH_MENU_SAVE: 'push:menu-save',
+  PUSH_MENU_SAVE_AS: 'push:menu-save-as',
   PUSH_THEME_CHANGE: 'push:theme-change'
 } as const
 
