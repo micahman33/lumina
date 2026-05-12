@@ -1,6 +1,6 @@
 import { ipcMain, dialog, BrowserWindow, app, shell } from 'electron'
-import { readFile, writeFile, mkdir } from 'fs/promises'
-import { basename, extname, join } from 'path'
+import { readFile, writeFile, mkdir, rename } from 'fs/promises'
+import { basename, extname, join, dirname } from 'path'
 import { IPC } from '../../renderer/src/types/ipc'
 import store from '../store'
 import { WELCOME_CONTENT } from '../welcome'
@@ -157,6 +157,22 @@ export function registerFileHandlers(): void {
 
   ipcMain.handle(IPC.RECENT_REVEAL, (_, path: string): void => {
     shell.showItemInFolder(path)
+  })
+
+  ipcMain.handle(IPC.RECENT_RENAME, async (_, oldPath: string, newName: string): Promise<{ newPath: string } | null> => {
+    try {
+      const newPath = join(dirname(oldPath), newName)
+      await rename(oldPath, newPath)
+      // Update the entry in recents
+      const files = store.get('recentFiles')
+      const updated = files.map((f) =>
+        f.path === oldPath ? { ...f, path: newPath, name: newName } : f
+      )
+      store.set('recentFiles', updated)
+      return { newPath }
+    } catch {
+      return null
+    }
   })
 
   ipcMain.handle(IPC.SETTINGS_GET, () => {

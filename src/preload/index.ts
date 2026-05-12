@@ -40,6 +40,9 @@ const api = {
   revealFile: (path: string): Promise<void> =>
     ipcRenderer.invoke(IPC.RECENT_REVEAL, path),
 
+  renameFile: (oldPath: string, newName: string): Promise<{ newPath: string } | null> =>
+    ipcRenderer.invoke(IPC.RECENT_RENAME, oldPath, newName),
+
   getSettings: (): Promise<AppSettings> => ipcRenderer.invoke(IPC.SETTINGS_GET),
 
   setSettings: (partial: Partial<AppSettings>): Promise<void> =>

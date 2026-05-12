@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useAppStore } from '../../store/appStore'
-import { Search, FilePlus, Folder, Pin, PinOff, FolderOpen, Trash2 } from 'lucide-react'
+import { Search, FilePlus, Folder, Pin, PinOff, FolderOpen, Trash2, Pencil } from 'lucide-react'
 import type { RecentFile } from '../../types/file'
 
 function relativeTime(iso: string): string {
@@ -32,10 +33,14 @@ export function Sidebar({ onOpenFile, onNewFile }: SidebarProps): JSX.Element {
   const recentFiles = useAppStore((s) => s.recentFiles)
   const setRecentFiles = useAppStore((s) => s.setRecentFiles)
   const activeFilePath = useAppStore((s) => s.file.path)
+  const setFile = useAppStore((s) => s.setFile)
   const [query, setQuery] = useState('')
   const [ctxMenu, setCtxMenu] = useState<CtxMenu | null>(null)
+  const [renamingPath, setRenamingPath] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
   const ctxRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+  const renameInputRef = useRef<HTMLInputElement>(null)
 
   const q = query.trim().toLowerCase()
 
@@ -81,10 +86,25 @@ export function Sidebar({ onOpenFile, onNewFile }: SidebarProps): JSX.Element {
     }
   }, [ctxMenu])
 
+  // Focus rename input when entering rename mode
+  useEffect(() => {
+    if (renamingPath) {
+      // Defer so the input is in the DOM
+      setTimeout(() => {
+        renameInputRef.current?.focus()
+        renameInputRef.current?.select()
+      }, 0)
+    }
+  }, [renamingPath])
+
   const handleContextMenu = (e: React.MouseEvent, file: RecentFile): void => {
     e.preventDefault()
     e.stopPropagation()
-    setCtxMenu({ x: e.clientX, y: e.clientY, file })
+    // Clamp so menu never overflows viewport
+    const menuH = 160 // approx height with rename item
+    const x = Math.min(e.clientX, window.innerWidth - 200)
+    const y = Math.min(e.clientY, window.innerHeight - menuH)
+    setCtxMenu({ x, y, file })
   }
 
   const handlePin = async (file: RecentFile): Promise<void> => {
@@ -104,6 +124,34 @@ export function Sidebar({ onOpenFile, onNewFile }: SidebarProps): JSX.Element {
     setRecentFiles(recentFiles.filter((f) => f.path !== file.path))
   }
 
+  const startRename = (file: RecentFile): void => {
+    setCtxMenu(null)
+    setRenamingPath(file.path)
+    setRenameValue(file.name)
+  }
+
+  const commitRename = async (): Promise<void> => {
+    if (!renamingPath) return
+    const newName = renameValue.trim()
+    setRenamingPath(null)
+    if (!newName || newName === recentFiles.find((f) => f.path === renamingPath)?.name) return
+    const result = await window.api.renameFile(renamingPath, newName)
+    if (!result) return
+    // Update local recents state
+    setRecentFiles(
+      recentFiles.map((f) => f.path === renamingPath ? { ...f, path: result.newPath, name: newName } : f)
+    )
+    // Update active file path if we just renamed the open file
+    if (activeFilePath === renamingPath) {
+      setFile({ path: result.newPath })
+      document.title = `${newName} — Lumina`
+    }
+  }
+
+  const cancelRename = (): void => {
+    setRenamingPath(null)
+  }
+
   // Parent directory of active file for footer
   const activeDir = activeFilePath
     ? activeFilePath.split(/[/\\]/).slice(0, -1).join('/') || '/'
@@ -111,7 +159,7 @@ export function Sidebar({ onOpenFile, onNewFile }: SidebarProps): JSX.Element {
 
   return (
     <div
-      className={`flex flex-col shrink-0 overflow-hidden transition-all duration-200 ease-in-out ${sidebarOpen ? 'w-[220px]' : 'w-0'}`}
+      className={`flex flex-col h-full shrink-0 overflow-hidden transition-all duration-200 ease-in-out ${sidebarOpen ? 'w-[220px]' : 'w-0'}`}
       style={{ borderRight: '1px solid var(--lm-border)', background: 'var(--lm-sidebar)' }}
     >
       <div className="w-[220px] flex flex-col h-full">
@@ -185,23 +233,21 @@ export function Sidebar({ onOpenFile, onNewFile }: SidebarProps): JSX.Element {
           ) : (
             filtered.map((file) => {
               const active = file.path === activeFilePath
+              const isRenaming = file.path === renamingPath
               return (
-                <button
+                <div
                   key={file.path}
-                  onClick={() => onOpenFile(file.path)}
                   onContextMenu={(e) => handleContextMenu(e, file)}
-                  title={file.path}
                   className="titlebar-no-drag w-full text-left transition-colors duration-100"
                   style={{
                     position: 'relative',
                     padding: '8px 12px 8px 16px',
                     borderRadius: 8,
-                    background: active
-                      ? 'rgba(91,108,255,0.10)'
-                      : 'transparent',
-                    cursor: 'pointer',
+                    background: active ? 'rgba(91,108,255,0.10)' : 'transparent',
+                    cursor: isRenaming ? 'default' : 'pointer',
                     border: 'none',
                   }}
+                  onClick={() => { if (!isRenaming) onOpenFile(file.path) }}
                   onMouseEnter={(e) => {
                     if (!active) (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.04)'
                   }}
@@ -219,37 +265,65 @@ export function Sidebar({ onOpenFile, onNewFile }: SidebarProps): JSX.Element {
                   )}
 
                   {/* Pin indicator */}
-                  {file.pinned && (
+                  {file.pinned && !isRenaming && (
                     <div style={{ position: 'absolute', right: 8, top: 8 }}>
                       <Pin size={10} style={{ color: '#5B6CFF', opacity: 0.7 }} />
                     </div>
                   )}
 
-                  <div style={{
-                    fontSize: 13,
-                    fontWeight: active ? 600 : 500,
-                    color: 'var(--lm-ink)',
-                    lineHeight: 1.3,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    paddingRight: file.pinned ? 16 : 0,
-                  }}>
-                    {file.name}
-                  </div>
-                  {(() => {
-                    const excerpt = snippetExcerpt(file.snippet)
-                    return excerpt ? (
-                      <div style={{ fontSize: 11, color: 'var(--lm-ink-faint)', marginTop: 3, lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                        {excerpt}
+                  {isRenaming ? (
+                    <input
+                      ref={renameInputRef}
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') { e.preventDefault(); commitRename() }
+                        if (e.key === 'Escape') cancelRename()
+                      }}
+                      onBlur={commitRename}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        width: '100%',
+                        fontSize: 13,
+                        fontWeight: 500,
+                        color: 'var(--lm-ink)',
+                        background: 'var(--lm-chrome)',
+                        border: '1px solid #5B6CFF',
+                        borderRadius: 4,
+                        padding: '1px 5px',
+                        outline: 'none',
+                        caretColor: '#5B6CFF',
+                      }}
+                    />
+                  ) : (
+                    <>
+                      <div style={{
+                        fontSize: 13,
+                        fontWeight: active ? 600 : 500,
+                        color: 'var(--lm-ink)',
+                        lineHeight: 1.3,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        paddingRight: file.pinned ? 16 : 0,
+                      }}>
+                        {file.name}
                       </div>
-                    ) : (
-                      <div style={{ fontSize: 11, color: 'var(--lm-ink-faint)', marginTop: 2 }}>
-                        {relativeTime(file.lastOpened)}
-                      </div>
-                    )
-                  })()}
-                </button>
+                      {(() => {
+                        const excerpt = snippetExcerpt(file.snippet)
+                        return excerpt ? (
+                          <div style={{ fontSize: 11, color: 'var(--lm-ink-faint)', marginTop: 3, lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                            {excerpt}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: 11, color: 'var(--lm-ink-faint)', marginTop: 2 }}>
+                            {relativeTime(file.lastOpened)}
+                          </div>
+                        )
+                      })()}
+                    </>
+                  )}
+                </div>
               )
             })
           )}
@@ -276,14 +350,15 @@ export function Sidebar({ onOpenFile, onNewFile }: SidebarProps): JSX.Element {
         )}
       </div>
 
-      {/* Right-click context menu */}
-      {ctxMenu && (
+      {/* Right-click context menu — rendered via portal so it escapes overflow:hidden
+          and any transform-based containing blocks in ancestor elements */}
+      {ctxMenu && createPortal(
         <div
           ref={ctxRef}
-          className="fixed z-50 py-1.5 rounded-xl shadow-xl border"
+          className="fixed z-[9999] py-1.5 rounded-xl shadow-xl border"
           style={{
-            left: Math.min(ctxMenu.x, window.innerWidth - 200),
-            top: Math.min(ctxMenu.y, window.innerHeight - 140),
+            left: ctxMenu.x,
+            top: ctxMenu.y,
             width: 192,
             background: 'var(--lm-chrome)',
             borderColor: 'var(--lm-border)',
@@ -293,6 +368,11 @@ export function Sidebar({ onOpenFile, onNewFile }: SidebarProps): JSX.Element {
             icon={ctxMenu.file.pinned ? PinOff : Pin}
             label={ctxMenu.file.pinned ? 'Unpin' : 'Pin to top'}
             onClick={() => handlePin(ctxMenu.file)}
+          />
+          <CtxItem
+            icon={Pencil}
+            label="Rename"
+            onClick={() => startRename(ctxMenu.file)}
           />
           <CtxItem
             icon={FolderOpen}
@@ -306,7 +386,8 @@ export function Sidebar({ onOpenFile, onNewFile }: SidebarProps): JSX.Element {
             danger
             onClick={() => handleRemove(ctxMenu.file)}
           />
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

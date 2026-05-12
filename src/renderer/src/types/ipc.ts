@@ -13,6 +13,7 @@ export const IPC = {
   RECENT_REMOVE: 'recent:remove',
   RECENT_PIN: 'recent:pin',
   RECENT_REVEAL: 'recent:reveal',
+  RECENT_RENAME: 'recent:rename',
   // Spell-check
   SPELL_GET: 'spell:get-suggestions',
   SPELL_REPLACE: 'spell:replace',
