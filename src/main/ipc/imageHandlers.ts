@@ -92,8 +92,8 @@ export function registerImageHandlers(): void {
     // Return a media://local/<abs-path> URL so the renderer can display it immediately.
     // We use the "local" dummy host to prevent Chromium from stealing the first path
     // segment as a hostname when the scheme is registered as standard:true.
-    const normalized = destPath.replace(/\\/g, '/')
-    const absPath = normalized.startsWith('/') ? normalized : '/' + normalized
+    const normPath = destPath.replace(/\\/g, '/')
+    const absPath = normPath.startsWith('/') ? normPath : '/' + normPath
     return `media://local${absPath}`
   })
 
@@ -117,8 +117,8 @@ export function registerImageHandlers(): void {
       }
 
       await writeFile(destPath, data)
-      const normalized = destPath.replace(/\\/g, '/')
-      const absPath = normalized.startsWith('/') ? normalized : '/' + normalized
+      const normPath = destPath.replace(/\\/g, '/')
+      const absPath = normPath.startsWith('/') ? normPath : '/' + normPath
       return `media://local${absPath}`
     }
   )
