@@ -23,6 +23,12 @@
 
 ---
 
+<p align="center">
+  <img src="assets/screenshot.png" width="860" alt="Lumina editor screenshot" />
+</p>
+
+---
+
 **Just write.**
 
 Lumina is a WYSIWYG editor for Markdown and plain text files on macOS and Windows. Format what you mean — the Markdown is written for you, behind the glass.
@@ -56,6 +62,52 @@ Open any `.md` or `.txt` file and it just works. The cursor sits where you see i
 ---
 
 ## What's New
+
+### v1.6.3
+
+**Bug Fixes**
+- Sidebar now fills the full window height correctly
+- Right-click context menu rendered via portal — no longer clipped behind file rows or offset from click position
+- **Rename** added to the right-click context menu — click to edit the filename inline, press Enter to confirm or Escape to cancel; renames on disk and updates the title bar if the file is open
+- Fixed **File → Save As…** doing nothing (was incorrectly firing the regular Save action)
+- Fixed build error from duplicate variable name in image handler
+
+---
+
+### v1.6.0
+
+**Export**
+- **File → Export → HTML** — saves a self-contained, styled HTML document via the OS save dialog
+- **File → Export → PDF** — writes a print-quality PDF via Electron's print engine
+
+**Clipboard Image Paste**
+- Paste an image (Cmd+V / Ctrl+V) directly into the editor — Lumina saves it to the document's `images/` folder and inserts it inline
+
+**Command Palette** (`⌘⇧P` / `Ctrl+Shift+P`)
+- Fuzzy-search across all editor commands, formatting options, and recent files from one keyboard-driven panel
+
+**Outline Panel** (`⌘⇧O` / `Ctrl+Shift+O`)
+- Live heading tree in a right sidebar; click any heading to smooth-scroll to it
+
+**Focus Mode** (`⌘⇧↩` / `Ctrl+Shift+Enter`)
+- Collapses the toolbar and sidebar; narrows the canvas to 65 characters for distraction-free writing
+
+---
+
+### v1.4.0 — v1.5.0
+
+**Find & Replace** (`⌘F` / `Ctrl+F`)
+- Full find-and-replace panel with match counter and step-through navigation
+
+**Auto-save**
+- Changes are silently saved 2 seconds after you stop typing — the status bar shows a dot indicator
+
+**Sidebar improvements**
+- Pin files to keep them at the top of the list
+- Right-click → Reveal in Finder / Show in Explorer
+- Right-click → Remove from recents
+
+---
 
 ### v1.1.0
 
