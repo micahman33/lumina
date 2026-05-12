@@ -1,6 +1,6 @@
 {
   "name": "lumina",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "description": "A beautiful WYSIWYG Markdown editor",
   "main": "./out/main/index.js",
   "author": "EasyMarkEditor",
