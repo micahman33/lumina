@@ -19,6 +19,7 @@ interface ToolbarProps {
   onInsertImage: () => void
   onExportHtml: () => void
   onExportPdf: () => void
+  onExportDocx: () => void
 }
 
 function getFormatLabel(editor: Editor): string {
@@ -109,7 +110,7 @@ function Sep(): JSX.Element {
   )
 }
 
-export function Toolbar({ editor, onOpenFile, onSaveFile, onInsertImage, onExportHtml, onExportPdf }: ToolbarProps): JSX.Element {
+export function Toolbar({ editor, onOpenFile, onSaveFile, onInsertImage, onExportHtml, onExportPdf, onExportDocx }: ToolbarProps): JSX.Element {
   const toggleSidebar = useAppStore((s) => s.toggleSidebar)
   const setSettingsOpen = useAppStore((s) => s.setSettingsOpen)
   const setLinkDialogOpen = useAppStore((s) => s.setLinkDialogOpen)
@@ -326,6 +327,15 @@ export function Toolbar({ editor, onOpenFile, onSaveFile, onInsertImage, onExpor
               onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = 'transparent'}
             >
               Export as PDF
+            </DropdownMenu.Item>
+            <DropdownMenu.Item
+              onSelect={onExportDocx}
+              className="flex items-center px-4 outline-none cursor-pointer"
+              style={{ padding: '7px 14px', fontSize: 13, color: 'var(--lm-ink)' }}
+              onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(91,108,255,0.08)'}
+              onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+            >
+              Export as Word (.docx)
             </DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu.Portal>

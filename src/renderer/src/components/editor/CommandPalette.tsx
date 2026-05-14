@@ -123,6 +123,7 @@ interface CommandContext {
   onNewFile: () => void
   onExportHtml: () => void
   onExportPdf: () => void
+  onExportDocx: () => void
 }
 
 const STATIC_COMMANDS: CommandDef[] = [
@@ -177,6 +178,14 @@ const STATIC_COMMANDS: CommandDef[] = [
     icon: Download,
     keywords: ['export', 'pdf', 'print'],
     action: ({ onExportPdf }) => onExportPdf(),
+  },
+  {
+    id: 'file:export-docx',
+    label: 'Export as Word (.docx)',
+    category: 'file',
+    icon: Download,
+    keywords: ['export', 'word', 'docx', 'office'],
+    action: ({ onExportDocx }) => onExportDocx(),
   },
 
   // ── Format ──────────────────────────────────────────────────────────────
@@ -430,6 +439,7 @@ interface CommandPaletteProps {
   onNewFile: () => void
   onExportHtml: () => void
   onExportPdf: () => void
+  onExportDocx: () => void
 }
 
 export function CommandPalette({
@@ -440,6 +450,7 @@ export function CommandPalette({
   onNewFile,
   onExportHtml,
   onExportPdf,
+  onExportDocx,
 }: CommandPaletteProps): JSX.Element | null {
   const commandPaletteOpen = useAppStore((s) => s.commandPaletteOpen)
   const setCommandPaletteOpen = useAppStore((s) => s.setCommandPaletteOpen)
@@ -490,10 +501,10 @@ export function CommandPalette({
   const execute = useCallback(
     (cmd: CommandDef) => {
       close()
-      const ctx: CommandContext = { editor, onOpenFile, onSaveFile, onSaveFileAs, onNewFile, onExportHtml, onExportPdf }
+      const ctx: CommandContext = { editor, onOpenFile, onSaveFile, onSaveFileAs, onNewFile, onExportHtml, onExportPdf, onExportDocx }
       cmd.action(ctx)
     },
-    [close, editor, onOpenFile, onSaveFile, onSaveFileAs, onNewFile, onExportHtml, onExportPdf]
+    [close, editor, onOpenFile, onSaveFile, onSaveFileAs, onNewFile, onExportHtml, onExportPdf, onExportDocx]
   )
 
   const handleKeyDown = useCallback(

@@ -26,6 +26,7 @@ function replaceExt(filePath: string | null, newExt: string): string {
 export function useExport(editor: Editor | null): {
   exportHtml: () => Promise<void>
   exportPdf: () => Promise<void>
+  exportDocx: () => Promise<void>
 } {
   const showToast = useAppStore((s) => s.showToast)
   const filePath = useAppStore((s) => s.file.path)
@@ -65,5 +66,24 @@ export function useExport(editor: Editor | null): {
     }
   }, [editor, filePath, showToast])
 
-  return { exportHtml, exportPdf }
+  const exportDocx = useCallback(async () => {
+    if (!editor) return
+    const title = getExportTitle(filePath)
+    let bodyHtml = editor.getHTML()
+    if (filePath) bodyHtml = unresolveRelativeImagePaths(bodyHtml, filePath)
+    // Wrap in a minimal document body so html-to-docx has full context
+    const html = `<html><body>${bodyHtml}</body></html>`
+    const defaultPath = replaceExt(filePath, '.docx')
+
+    try {
+      const result = await window.api.exportDocx({ defaultPath, html, title })
+      if (!result) return
+      const name = result.path.replace(/\\/g, '/').split('/').pop() ?? result.path
+      showToast(`Exported to ${name}`, 'success')
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Word export failed', 'error')
+    }
+  }, [editor, filePath, showToast])
+
+  return { exportHtml, exportPdf, exportDocx }
 }

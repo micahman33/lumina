@@ -20,6 +20,7 @@ export const IPC = {
   // Export
   EXPORT_HTML: 'export:html',
   EXPORT_PDF: 'export:pdf',
+  EXPORT_DOCX: 'export:docx',
   // Image paste
   PASTE_IMAGE: 'image:paste',
   // Push from main → renderer

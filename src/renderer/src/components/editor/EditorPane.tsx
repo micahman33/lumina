@@ -34,7 +34,7 @@ export function EditorPane({
   const handleSaveFileAs = onSaveFileAs ?? (() => {})
   const handleNewFile = onNewFile ?? (() => {})
 
-  const { exportHtml, exportPdf } = useExport(editor)
+  const { exportHtml, exportPdf, exportDocx } = useExport(editor)
 
   const outlineOpen = useAppStore((s) => s.outlineOpen)
   const focusMode = useAppStore((s) => s.focusMode)
@@ -53,7 +53,7 @@ export function EditorPane({
           flexShrink: 0,
         }}
       >
-        <Toolbar editor={editor} onOpenFile={onOpenFile} onSaveFile={onSaveFile} onInsertImage={onInsertImage} onExportHtml={exportHtml} onExportPdf={exportPdf} />
+        <Toolbar editor={editor} onOpenFile={onOpenFile} onSaveFile={onSaveFile} onInsertImage={onInsertImage} onExportHtml={exportHtml} onExportPdf={exportPdf} onExportDocx={exportDocx} />
       </div>
 
       {/* relative wrapper so FindReplacePanel can position absolutely within the editor area */}
@@ -91,6 +91,7 @@ export function EditorPane({
         onNewFile={handleNewFile}
         onExportHtml={exportHtml}
         onExportPdf={exportPdf}
+        onExportDocx={exportDocx}
       />
     </div>
   )

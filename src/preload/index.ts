@@ -84,6 +84,9 @@ const api = {
   exportPdf: (args: { defaultPath: string }): Promise<{ path: string } | null> =>
     ipcRenderer.invoke(IPC.EXPORT_PDF, args),
 
+  exportDocx: (args: { defaultPath: string; html: string; title: string }): Promise<{ path: string } | null> =>
+    ipcRenderer.invoke(IPC.EXPORT_DOCX, args),
+
   pasteImage: (args: { buffer: number[]; mimeType: string; documentPath: string | null }): Promise<string> =>
     ipcRenderer.invoke(IPC.PASTE_IMAGE, args),
 

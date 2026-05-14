@@ -195,6 +195,26 @@ export function registerFileHandlers(): void {
     return { path: result.filePath }
   })
 
+  ipcMain.handle(IPC.EXPORT_DOCX, async (_, args: { defaultPath: string; html: string; title: string }) => {
+    const win = BrowserWindow.getFocusedWindow()
+    if (!win) return null
+    const result = await dialog.showSaveDialog(win, {
+      defaultPath: args.defaultPath,
+      filters: [{ name: 'Word Document', extensions: ['docx'] }],
+    })
+    if (result.canceled || !result.filePath) return null
+    // Dynamically import to avoid bundling issues with ESM-only package
+    const HTMLtoDOCX = (await import('html-to-docx')).default
+    const docxBuffer = await HTMLtoDOCX(args.html, undefined, {
+      title: args.title,
+      font: 'Calibri',
+      fontSize: 24,
+      margins: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
+    }) as Buffer
+    await writeFile(result.filePath, docxBuffer)
+    return { path: result.filePath }
+  })
+
   ipcMain.handle(IPC.EXPORT_PDF, async (_, args: { defaultPath: string }) => {
     const win = BrowserWindow.getFocusedWindow()
     if (!win) return null
