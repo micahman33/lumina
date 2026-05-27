@@ -110,8 +110,26 @@ export function buildMenu(win: BrowserWindow): void {
       role: 'help' as const,
       submenu: [
         {
-          label: 'Learn More',
-          click: () => shell.openExternal('https://github.com')
+          label: 'About Lumina',
+          click: () => {
+            app.setAboutPanelOptions({
+              applicationName: 'Lumina',
+              applicationVersion: app.getVersion(),
+              copyright: '© 2026 Lumina',
+              credits: 'Built with Electron, TipTap, and React',
+              website: 'https://github.com/micahman33/lumina',
+            })
+            app.showAboutPanel()
+          }
+        },
+        { type: 'separator' as const },
+        {
+          label: 'View on GitHub',
+          click: () => shell.openExternal('https://github.com/micahman33/lumina')
+        },
+        {
+          label: 'Report an Issue',
+          click: () => shell.openExternal('https://github.com/micahman33/lumina/issues')
         }
       ]
     }

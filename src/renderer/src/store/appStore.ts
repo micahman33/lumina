@@ -1,8 +1,15 @@
 import { create } from 'zustand'
 import type { AppSettings, FileState, RecentFile } from '../types/file'
 
+/** In-memory scratchpad: content of the current unsaved new file */
+export interface DraftState {
+  content: string       // raw markdown / text
+  createdAt: string     // ISO timestamp — used as stable key
+}
+
 interface AppState {
   file: FileState
+  draft: DraftState | null
   theme: AppSettings['theme']
   sidebarOpen: boolean
   recentFiles: RecentFile[]
@@ -17,6 +24,8 @@ interface AppState {
 
   setFile: (file: Partial<FileState>) => void
   markDirty: (dirty: boolean) => void
+  saveDraft: (content: string) => void
+  clearDraft: () => void
   setTheme: (theme: AppSettings['theme']) => void
   toggleSidebar: () => void
   setSidebarOpen: (open: boolean) => void
@@ -34,6 +43,7 @@ interface AppState {
 
 export const useAppStore = create<AppState>((set) => ({
   file: { path: null, content: '', isDirty: false, fileType: 'md' },
+  draft: null,
   theme: 'system',
   sidebarOpen: true,
   recentFiles: [],
@@ -51,6 +61,13 @@ export const useAppStore = create<AppState>((set) => ({
 
   markDirty: (dirty) =>
     set((state) => ({ file: { ...state.file, isDirty: dirty } })),
+
+  saveDraft: (content) =>
+    set((state) => ({
+      draft: { content, createdAt: state.draft?.createdAt ?? new Date().toISOString() }
+    })),
+
+  clearDraft: () => set({ draft: null }),
 
   setTheme: (theme) => set({ theme }),
 

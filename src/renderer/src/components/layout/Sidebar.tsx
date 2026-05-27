@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAppStore } from '../../store/appStore'
-import { Search, FilePlus, Folder, Pin, PinOff, FolderOpen, Trash2, Pencil } from 'lucide-react'
+import { Search, FilePlus, Folder, Pin, PinOff, FolderOpen, Trash2, Pencil, FileEdit } from 'lucide-react'
 import type { RecentFile } from '../../types/file'
 
 function relativeTime(iso: string): string {
@@ -20,6 +20,7 @@ function relativeTime(iso: string): string {
 interface SidebarProps {
   onOpenFile: (path: string) => void
   onNewFile: () => void
+  onOpenDraft: () => void
 }
 
 interface CtxMenu {
@@ -28,11 +29,13 @@ interface CtxMenu {
   file: RecentFile
 }
 
-export function Sidebar({ onOpenFile, onNewFile }: SidebarProps): JSX.Element {
+export function Sidebar({ onOpenFile, onNewFile, onOpenDraft }: SidebarProps): JSX.Element {
   const sidebarOpen = useAppStore((s) => s.sidebarOpen)
   const recentFiles = useAppStore((s) => s.recentFiles)
   const setRecentFiles = useAppStore((s) => s.setRecentFiles)
   const activeFilePath = useAppStore((s) => s.file.path)
+  const activeDirty = useAppStore((s) => s.file.isDirty)
+  const draft = useAppStore((s) => s.draft)
   const setFile = useAppStore((s) => s.setFile)
   const [query, setQuery] = useState('')
   const [ctxMenu, setCtxMenu] = useState<CtxMenu | null>(null)
@@ -223,6 +226,34 @@ export function Sidebar({ onOpenFile, onNewFile }: SidebarProps): JSX.Element {
             <FilePlus size={13} strokeWidth={1.6} style={{ color: 'var(--lm-ink-faint)' }} />
           </button>
         </div>
+
+        {/* Unsaved draft entry — shown when there's a saved scratchpad OR the active file is unsaved */}
+        {(draft || (!activeFilePath && activeDirty)) && (
+          <div className="px-2.5 pb-1">
+            <button
+              onClick={onOpenDraft}
+              className="titlebar-no-drag w-full text-left transition-colors duration-100"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '7px 12px',
+                borderRadius: 8,
+                border: '1px dashed rgba(91,108,255,0.4)',
+                background: !activeFilePath && activeDirty ? 'rgba(91,108,255,0.08)' : 'transparent',
+                cursor: 'pointer',
+              }}
+              onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(91,108,255,0.08)'}
+              onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = !activeFilePath && activeDirty ? 'rgba(91,108,255,0.08)' : 'transparent'}
+            >
+              <FileEdit size={12} style={{ color: '#5B6CFF', flexShrink: 0 }} />
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 500, color: '#5B6CFF' }}>Unsaved draft</div>
+                <div style={{ fontSize: 11, color: 'var(--lm-ink-faint)' }}>Not saved to disk</div>
+              </div>
+            </button>
+          </div>
+        )}
 
         {/* File list */}
         <div className="flex-1 overflow-y-auto px-2.5 pb-2 flex flex-col gap-0.5">

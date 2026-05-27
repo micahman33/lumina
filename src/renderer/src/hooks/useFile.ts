@@ -20,6 +20,8 @@ export function useFile(editor: Editor | null): {
   const setFile = useAppStore((s) => s.setFile)
   const markDirty = useAppStore((s) => s.markDirty)
   const setRecentFiles = useAppStore((s) => s.setRecentFiles)
+  const saveDraft = useAppStore((s) => s.saveDraft)
+  const clearDraft = useAppStore((s) => s.clearDraft)
 
   /** Add to recents without reordering existing entries mid-session. */
   const stableAddRecent = useCallback(
@@ -75,8 +77,22 @@ export function useFile(editor: Editor | null): {
     return path ? unresolveRelativeImagePaths(raw, path) : raw
   }, [editor])
 
+  /**
+   * If there's an unsaved new file with content, snapshot it to the draft store
+   * before switching away.  Called at the top of every "open" action.
+   */
+  const snapshotDraftIfNeeded = useCallback(() => {
+    const state = useAppStore.getState()
+    if (!state.file.path && state.file.isDirty && editor) {
+      const raw = (editor.storage as Record<string, { getMarkdown?: () => string }>)
+        .markdown?.getMarkdown?.() ?? editor.getText()
+      if (raw.trim()) saveDraft(raw)
+    }
+  }, [editor, saveDraft])
+
   const openFilePath = useCallback(
     async (path: string) => {
+      snapshotDraftIfNeeded()
       const result = await window.api.openFilePath(path)
       if (!result) return
       const fileType = detectFileType(result.path)
@@ -85,16 +101,27 @@ export function useFile(editor: Editor | null): {
       await stableAddRecent(result.path, extractSnippet(result.content, fileType))
       document.title = `${result.path.split(/[/\\]/).pop()} — Lumina`
     },
-    [setFile, loadContent, stableAddRecent]
+    [setFile, loadContent, stableAddRecent, snapshotDraftIfNeeded]
   )
 
   const newFile = useCallback(() => {
+    snapshotDraftIfNeeded()
     setFile({ path: null, content: '', isDirty: false, fileType: 'md' })
     editor?.commands.setContent('')
     document.title = 'Untitled — Lumina'
-  }, [editor, setFile])
+  }, [editor, setFile, snapshotDraftIfNeeded])
+
+  /** Restore the in-memory draft into the editor. */
+  const openDraft = useCallback(() => {
+    const { draft } = useAppStore.getState()
+    if (!draft || !editor) return
+    setFile({ path: null, content: draft.content, isDirty: true, fileType: 'md' })
+    loadContent(draft.content, 'md', null)
+    document.title = 'Unsaved draft — Lumina'
+  }, [editor, setFile, loadContent])
 
   const openFile = useCallback(async () => {
+    snapshotDraftIfNeeded()
     const result = await window.api.openFile()
     if (!result) return
     const fileType = detectFileType(result.path)
@@ -102,7 +129,7 @@ export function useFile(editor: Editor | null): {
     loadContent(result.content, fileType, result.path)
     await stableAddRecent(result.path, extractSnippet(result.content, fileType))
     document.title = `${result.path.split(/[/\\]/).pop()} — Lumina`
-  }, [setFile, loadContent, stableAddRecent])
+  }, [setFile, loadContent, stableAddRecent, snapshotDraftIfNeeded])
 
   const saveFile = useCallback(async () => {
     const state = useAppStore.getState()
@@ -122,10 +149,11 @@ export function useFile(editor: Editor | null): {
     const fileType = detectFileType(result.path)
     setFile({ path: result.path, isDirty: false, fileType })
     markDirty(false)
+    clearDraft()  // draft is now a real saved file
     ;(window as Window & { __lumina_isDirty__?: boolean }).__lumina_isDirty__ = false
     await stableAddRecent(result.path, extractSnippet(content, fileType))
     document.title = `${result.path.split(/[/\\]/).pop()} — Lumina`
-  }, [getContent, setFile, markDirty, stableAddRecent])
+  }, [getContent, setFile, markDirty, clearDraft, stableAddRecent])
 
   // Menu-triggered open / save
   useEffect(() => {
@@ -183,5 +211,5 @@ export function useFile(editor: Editor | null): {
     })
   }, [])
 
-  return { openFile, saveFile, saveFileAs, newFile, openFilePath }
+  return { openFile, saveFile, saveFileAs, newFile, openFilePath, openDraft }
 }
