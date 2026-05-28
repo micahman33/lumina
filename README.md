@@ -24,7 +24,9 @@
 ---
 
 <p align="center">
-  <img src="assets/screenshot.png" width="860" alt="Lumina editor screenshot" />
+  <a href="https://luminaeditor.com">
+    <img src="assets/screenshot.png" width="860" alt="Lumina editor screenshot" />
+  </a>
 </p>
 
 ---
