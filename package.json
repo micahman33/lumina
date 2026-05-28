@@ -4,6 +4,7 @@
   "description": "A beautiful WYSIWYG Markdown editor",
   "main": "./out/main/index.js",
   "author": "Lumina",
+  "license": "GPL-3.0-only",
   "homepage": ".",
   "scripts": {
     "start": "electron-vite preview",
