@@ -4,6 +4,10 @@ All notable changes to Lumina are documented here.
 
 ---
 
+## v1.6.6
+
+- Mermaid diagrams in code blocks now render inline — fenced ```` ```mermaid ```` blocks show the flowchart, sequence diagram, etc., with a Source/Preview toggle to view or edit the syntax
+
 ## v1.6.5
 
 - Unsaved draft / scratchpad — switching away from an unsaved new file now preserves content in memory; a dashed "Unsaved draft" entry appears in the sidebar to return to it

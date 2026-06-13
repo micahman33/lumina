@@ -113,6 +113,7 @@ All exports available from the toolbar **Export** button or the Command Palette.
 - **Find & Replace** (`⌘F` / `Ctrl+F`) — match counter, step-through navigation, replace one or all
 - **Outline Panel** (`⌘⇧O` / `Ctrl+Shift+O`) — live heading tree; click any entry to scroll to it
 - **Code blocks** — syntax highlighting for 25 languages with a language picker pill on each block
+- **Mermaid diagrams** — fenced `mermaid` code blocks render as flowcharts, sequence diagrams, and more, with a toggle to view or edit the source
 
 ### Appearance
 
@@ -141,12 +142,16 @@ All exports available from the toolbar **Export** button or the Command Palette.
 
 ---
 
-## What's New — v1.6.5
+## What's New
+
+### v1.6.6
+
+- **Mermaid diagrams** — fenced ` ```mermaid ` code blocks render as flowcharts, sequence diagrams, and more, with a Source/Preview toggle
+
+### v1.6.5
 
 - **Unsaved draft** — switching away from an edited unsaved file now preserves it in the sidebar as a scratchpad you can return to at any time
 - **Help → About Lumina** shows version info directly from the Help menu (not just the macOS app menu)
-- **Help → View on GitHub / Report an Issue** shortcuts
-- Removed all legacy "EasyMarkEditor" branding
 
 [Full changelog →](CHANGELOG.md)
 
