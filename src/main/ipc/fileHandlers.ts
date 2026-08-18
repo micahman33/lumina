@@ -225,8 +225,8 @@ export function registerFileHandlers(): void {
     if (result.canceled || !result.filePath) return null
     const data = await win.webContents.printToPDF({
       printBackground: true,
-      pageSize: 'A4',
-      margins: { top: 25, bottom: 25, left: 20, right: 20 },
+      pageSize: 'Letter',
+      margins: { marginType: 'custom', top: 72, bottom: 72, left: 72, right: 72 },
     })
     await writeFile(result.filePath, data)
     return { path: result.filePath }

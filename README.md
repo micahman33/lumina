@@ -77,6 +77,7 @@ Lumina is a WYSIWYG desktop editor for Markdown and plain text files. You write 
 - **Clipboard paste** — paste an image from your clipboard (`⌘V` / `Ctrl+V`) and it's inserted inline
 - **Auto-organized** — images are copied into an `images/` subfolder next to your document and referenced with relative paths, so the folder stays self-contained and moveable
 - **Toolbar insert** — pick a file via the system dialog using the image button in the toolbar
+- **Resize** — click any image to select it, then drag the corner handle to resize; the width is saved with the file
 
 ### Tables
 
@@ -144,14 +145,14 @@ All exports available from the toolbar **Export** button or the Command Palette.
 
 ## What's New
 
+### v1.6.7
+
+- **Image resizing** — click any image to select it, then drag the handle at the bottom-right corner to resize; width persists on save
+- **PDF export** — fixed margin issue that was causing layout problems on export
+
 ### v1.6.6
 
 - **Mermaid diagrams** — fenced ` ```mermaid ` code blocks render as flowcharts, sequence diagrams, and more, with a Source/Preview toggle
-
-### v1.6.5
-
-- **Unsaved draft** — switching away from an edited unsaved file now preserves it in the sidebar as a scratchpad you can return to at any time
-- **Help → About Lumina** shows version info directly from the Help menu (not just the macOS app menu)
 
 [Full changelog →](CHANGELOG.md)
 

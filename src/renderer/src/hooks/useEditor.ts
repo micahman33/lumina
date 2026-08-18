@@ -4,6 +4,7 @@ import StarterKit from '@tiptap/starter-kit'
 import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight'
 import { createLowlight, common } from 'lowlight'
 import { CodeBlockView } from '../components/editor/CodeBlockView'
+import { ImageView } from '../components/editor/ImageView'
 
 const lowlight = createLowlight(common)
 
@@ -20,6 +21,9 @@ import { Image as BaseImage } from '@tiptap/extension-image'
 // Inline images so multiple <img> elements within a single <p> render on the
 // same line (critical for badge rows in READMEs).  Also adds width/height
 // attribute support so <img width="96"> renders at the correct size.
+// When the user drags the resize handle, width is stored as a pixel integer
+// and serialized back to the file as <img src="..." width="NNN"> HTML so
+// the size persists across save/reload.
 const Image = BaseImage.extend({
   inline: true,
   group: 'inline',
@@ -28,13 +32,35 @@ const Image = BaseImage.extend({
       ...this.parent?.(),
       width: {
         default: null,
-        parseHTML: (el) => el.getAttribute('width'),
+        parseHTML: (el) => {
+          const v = el.getAttribute('width')
+          return v ? Number(v) : null
+        },
         renderHTML: (attrs) => (attrs.width ? { width: attrs.width } : {}),
       },
       height: {
         default: null,
         parseHTML: (el) => el.getAttribute('height'),
         renderHTML: (attrs) => (attrs.height ? { height: attrs.height } : {}),
+      },
+    }
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(ImageView)
+  },
+  addStorage() {
+    return {
+      markdown: {
+        // When width is set, emit an <img> HTML tag so the size persists in the
+        // .md file. Without a width, use standard ![alt](src) Markdown syntax.
+        serialize(state: { write: (s: string) => void; esc: (s: string) => string }, node: { attrs: Record<string, unknown> }) {
+          const { src, alt, width } = node.attrs
+          if (width) {
+            state.write(`<img src="${src}" alt="${String(alt || '').replace(/"/g, '&quot;')}" width="${width}">`)
+          } else {
+            state.write(`![${state.esc(String(alt || ''))}](${String(src).replace(/[()]/g, '\\$&')})`)
+          }
+        },
       },
     }
   },

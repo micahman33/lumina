@@ -4,6 +4,11 @@ All notable changes to Lumina are documented here.
 
 ---
 
+## v1.6.7
+
+- **Image resizing** — click any image to select it, then drag the handle at the bottom-right corner to resize; width persists on save
+- **PDF export margins** — fixed incorrect margins that were causing layout issues on export
+
 ## v1.6.6
 
 - Mermaid diagrams in code blocks now render inline — fenced ```` ```mermaid ```` blocks show the flowchart, sequence diagram, etc., with a Source/Preview toggle to view or edit the syntax
