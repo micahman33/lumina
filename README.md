@@ -37,8 +37,8 @@ Lumina is a WYSIWYG desktop editor for Markdown and plain text files. You write 
 
 | Platform | Installer | Requires |
 |---|---|---|
-| macOS (Apple Silicon) | [Lumina-1.6.6-arm64.dmg](https://github.com/micahman33/lumina/releases/download/v1.6.6/Lumina-1.6.6-arm64.dmg) | macOS 13+ · M1/M2/M3/M4 |
-| Windows (x64) | [Lumina Setup 1.6.6.exe](https://github.com/micahman33/lumina/releases/download/v1.6.6/Lumina.Setup.1.6.6.exe) | Windows 10/11 |
+| macOS (Apple Silicon) | [Lumina-1.6.7-arm64.dmg](https://github.com/micahman33/lumina/releases/download/v1.6.7/Lumina-1.6.7-arm64.dmg) | macOS 13+ · M1/M2/M3/M4 |
+| Windows (x64) | [Lumina Setup 1.6.7.exe](https://github.com/micahman33/lumina/releases/download/v1.6.7/Lumina.Setup.1.6.7.exe) | Windows 10/11 |
 
 **macOS:** Download the `.dmg`, drag Lumina to `/Applications`. On first launch, if macOS shows an "unverified developer" warning, right-click the app and choose **Open**.
 
