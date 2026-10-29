@@ -145,7 +145,7 @@ All exports available from the toolbar **Export** button or the Command Palette.
 
 ## What's New
 
-### v1.6.10
+### v1.6.11
 
 - **Spell-check suggestions** — right-click a misspelled word for OS-dictionary suggestions, plus Add to Dictionary and Ignore (finally working on macOS and Windows)
 - **Security updates** — dependency and Electron patch updates, plus tighter handling of local image files

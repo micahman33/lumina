@@ -4,7 +4,7 @@ All notable changes to Lumina are documented here.
 
 ---
 
-## v1.6.10
+## v1.6.11
 
 - **Spell-check suggestions now actually work** — right-clicking a misspelled word shows the OS dictionary's suggestions (click to replace), plus **Add to Dictionary** and **Ignore**. The v1.6.8 fix didn't take: the editor cancelled the right-click event, which stopped Chromium from ever reporting the misspelling to the app
 - Dragging an image into the editor copies it into the `images/` folder again (it was silently falling back to embedding the image inline, due to the same removed `File.path` as v1.6.9)

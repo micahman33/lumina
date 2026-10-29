@@ -97,7 +97,8 @@
     ],
     "mac": {
       "category": "public.app-category.productivity",
-      "icon": "build/icon.icns"
+      "icon": "build/icon.icns",
+      "identity": "-"
     },
     "win": {
       "icon": "build/icon.ico",
