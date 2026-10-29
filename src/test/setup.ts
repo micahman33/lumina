@@ -22,8 +22,11 @@ Object.defineProperty(window, 'api', {
     removeRecentFile: vi.fn().mockResolvedValue(undefined),
     pinRecentFile: vi.fn().mockResolvedValue([]),
     revealFile: vi.fn().mockResolvedValue(undefined),
-    getSpellSuggestions: vi.fn().mockResolvedValue({ misspelledWord: '', suggestions: [] }),
+    onContextMenu: vi.fn().mockReturnValue(() => {}),
     replaceMisspelling: vi.fn(),
+    addWordToDictionary: vi.fn(),
+    ignoreWord: vi.fn(),
+    getPathForFile: vi.fn().mockReturnValue(''),
   },
   writable: true,
 })

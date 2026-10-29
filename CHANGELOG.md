@@ -4,6 +4,13 @@ All notable changes to Lumina are documented here.
 
 ---
 
+## v1.6.10
+
+- **Spell-check suggestions now actually work** — right-clicking a misspelled word shows the OS dictionary's suggestions (click to replace), plus **Add to Dictionary** and **Ignore**. The v1.6.8 fix didn't take: the editor cancelled the right-click event, which stopped Chromium from ever reporting the misspelling to the app
+- Dragging an image into the editor copies it into the `images/` folder again (it was silently falling back to embedding the image inline, due to the same removed `File.path` as v1.6.9)
+- **Security:** updated dependencies to clear 29 advisories, including a critical `dompurify` issue, a ProseMirror XSS fix, and an `electron-updater` credential-leak fix; Electron 41.5 → 41.10 (Chromium security patches)
+- **Security:** the internal `media://` image protocol now only serves image files, and in-app navigation away from the editor is blocked
+
 ## v1.6.9
 
 - Fixed image insertion via the toolbar on Electron 32+ — the non-standard `File.path` property was removed in that release; the handler now uses `webUtils.getPathForFile`, the documented replacement

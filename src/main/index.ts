@@ -10,11 +10,9 @@ import { IPC } from '../renderer/src/types/ipc'
 let mainWindow: BrowserWindow | null = null
 let pendingOpenPath: string | null = null
 let allowClose = false
-// Last spell-check data captured from the native context-menu event
-let lastSpellData: { misspelledWord: string; suggestions: string[] } = {
-  misspelledWord: '',
-  suggestions: []
-}
+// Words the user chose to "Ignore". Chromium has no per-session ignore list, so they are
+// added to the spellchecker dictionary and removed again on quit.
+const ignoredWords = new Set<string>()
 // Tracks whether the window close was triggered by Cmd+Q / app.quit()
 // so we can call app.quit() again after our async dialog finishes.
 let isQuitting = false
@@ -31,6 +29,14 @@ app.on('open-file', (event, path) => {
 // Set the quitting flag as early as possible so the close handler can read it.
 app.on('before-quit', () => {
   isQuitting = true
+})
+
+// Runs only once quitting is really under way (before-quit also fires if the user cancels
+// the unsaved-changes dialog), so "Ignore"d words stay ignored for the whole session.
+app.on('will-quit', () => {
+  const ses = mainWindow && !mainWindow.isDestroyed() ? mainWindow.webContents.session : null
+  if (ses) for (const word of ignoredWords) ses.removeWordFromSpellCheckerDictionary(word)
+  ignoredWords.clear()
 })
 
 protocol.registerSchemesAsPrivileged([
@@ -75,12 +81,21 @@ function createWindow(): void {
   applyWindowState(mainWindow)
   trackWindowState(mainWindow)
 
-  // Capture OS spell-check data so the renderer can include suggestions in its custom context menu
+  // Chromium only emits this native event when the page does NOT cancel the DOM
+  // `contextmenu` event. Forward the OS spell-check data to the renderer, which opens its
+  // own custom menu from it (Electron shows no native menu unless we build one).
   mainWindow.webContents.on('context-menu', (_e, params) => {
-    lastSpellData = {
+    mainWindow?.webContents.send(IPC.PUSH_CONTEXT_MENU, {
+      x: params.x,
+      y: params.y,
       misspelledWord: params.misspelledWord ?? '',
       suggestions: params.dictionarySuggestions ?? []
-    }
+    })
+  })
+
+  // Keep the window on our own content: block any navigation away from the app
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (url !== mainWindow?.webContents.getURL()) event.preventDefault()
   })
 
   // Redirect all window.open / target=_blank calls to the system browser
@@ -174,12 +189,24 @@ app.whenReady().then(() => {
   registerAllHandlers()
   registerMediaProtocol()
 
-  // Spell-check — renderer asks for the last captured OS suggestions
-  ipcMain.handle('spell:get-suggestions', () => lastSpellData)
-
   // Renderer picked a suggestion — use Chromium's built-in replaceMisspelling
-  ipcMain.on('spell:replace', (_e, word: string) => {
-    mainWindow?.webContents.replaceMisspelling(word)
+  ipcMain.on(IPC.SPELL_REPLACE, (_e, word: string) => {
+    if (typeof word === 'string') mainWindow?.webContents.replaceMisspelling(word)
+  })
+
+  // "Add to Dictionary" persists (and uses the OS custom dictionary on macOS/Windows)
+  ipcMain.on(IPC.SPELL_ADD_WORD, (_e, word: string) => {
+    if (typeof word === 'string' && word.trim()) {
+      mainWindow?.webContents.session.addWordToSpellCheckerDictionary(word)
+    }
+  })
+
+  // "Ignore" suppresses the underline until the app quits
+  ipcMain.on(IPC.SPELL_IGNORE_WORD, (_e, word: string) => {
+    if (typeof word === 'string' && word.trim()) {
+      mainWindow?.webContents.session.addWordToSpellCheckerDictionary(word)
+      ignoredWords.add(word)
+    }
   })
 
   // shell:open-external — used by the renderer for link clicks

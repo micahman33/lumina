@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from 'react'
+import { useCallback, useState, useEffect, useRef } from 'react'
 import { EditorContent } from '@tiptap/react'
 import type { Editor } from '@tiptap/react'
 import type { MutableRefObject } from 'react'
@@ -28,7 +28,7 @@ export function EditorCore({ editor, insertImageRef, focusMode }: EditorCoreProp
       e.stopPropagation()
 
       for (const file of imageFiles) {
-        const filePath = (file as File & { path?: string }).path
+        const filePath = window.api.getPathForFile(file)
         if (!filePath) {
           const reader = new FileReader()
           reader.onload = () =>
@@ -102,13 +102,37 @@ export function EditorCore({ editor, insertImageRef, focusMode }: EditorCoreProp
     insertImageRef.current = handleInsertImage
   }, [insertImageRef, handleInsertImage])
 
-  const handleContextMenu = useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    // Fetch OS spell-check data captured by the main process on the same right-click event.
-    // The native context-menu event fires before the renderer's onContextMenu, so by the
-    // time this async call resolves the main process already has the latest spell data.
-    const spell = await window.api.getSpellSuggestions()
-    setContextMenu({ x: e.clientX, y: e.clientY, visible: true, spell })
+  // Chromium only fires its native context-menu event (which carries the OS spell-check
+  // suggestions) if the page does NOT preventDefault the DOM `contextmenu` event. So we let
+  // it through, remember that the click was in the editor, and open our custom menu when
+  // the main process pushes the spell data back. The timeout is a fallback so the menu
+  // still opens (without spelling items) if the native event never arrives.
+  const pendingContextRef = useRef<{ x: number; y: number; timer: number } | null>(null)
+
+  useEffect(() => {
+    return window.api.onContextMenu((data) => {
+      const pending = pendingContextRef.current
+      if (!pending) return // right-click happened outside the editor
+      window.clearTimeout(pending.timer)
+      pendingContextRef.current = null
+      setContextMenu({
+        x: pending.x,
+        y: pending.y,
+        visible: true,
+        spell: { misspelledWord: data.misspelledWord, suggestions: data.suggestions }
+      })
+    })
+  }, [])
+
+  const handleContextMenu = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const x = e.clientX
+    const y = e.clientY
+    if (pendingContextRef.current) window.clearTimeout(pendingContextRef.current.timer)
+    const timer = window.setTimeout(() => {
+      pendingContextRef.current = null
+      setContextMenu({ x, y, visible: true })
+    }, 250)
+    pendingContextRef.current = { x, y, timer }
   }, [])
 
   return (

@@ -145,22 +145,19 @@ All exports available from the toolbar **Export** button or the Command Palette.
 
 ## What's New
 
+### v1.6.10
+
+- **Spell-check suggestions** — right-click a misspelled word for OS-dictionary suggestions, plus Add to Dictionary and Ignore (finally working on macOS and Windows)
+- **Security updates** — dependency and Electron patch updates, plus tighter handling of local image files
+
 ### v1.6.9
 
 - **Image insertion fix** — toolbar image picker now works correctly on all supported Electron versions (fixes a regression introduced in Electron 32)
-
-### v1.6.8
-
-- **Spell-check suggestions** — right-click any underlined misspelled word for OS-native correction suggestions on macOS and Windows
 
 ### v1.6.7
 
 - **Image resizing** — click any image to select it, then drag the handle at the bottom-right corner to resize; width persists on save
 - **PDF export** — fixed margin issue that was causing layout problems on export
-
-### v1.6.6
-
-- **Mermaid diagrams** — fenced ` ```mermaid ` code blocks render as flowcharts, sequence diagrams, and more, with a Source/Preview toggle
 
 [Full changelog →](CHANGELOG.md)
 

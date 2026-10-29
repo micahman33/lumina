@@ -4,7 +4,7 @@ import {
   ExternalLink, List, ListOrdered, ListTodo,
   Heading1, Heading2, Heading3, Heading4,
   Pilcrow, Table, Image as ImageIcon, Scissors, Copy,
-  RowsIcon, Columns3, Trash2, XCircle, Type, ChevronRight, Check
+  RowsIcon, Columns3, Trash2, XCircle, Type, ChevronRight, Check, Plus, EyeOff
 } from 'lucide-react'
 import type { Editor } from '@tiptap/react'
 import { useAppStore } from '../../store/appStore'
@@ -191,10 +191,13 @@ function SpellSuggestions({
   spell: SpellData
   run: (fn: () => void) => void
 }): JSX.Element | null {
-  if (!spell.misspelledWord || spell.suggestions.length === 0) return null
+  if (!spell.misspelledWord) return null
   return (
     <>
-      <SectionLabel>Spelling suggestions</SectionLabel>
+      <SectionLabel>Spelling</SectionLabel>
+      {spell.suggestions.length === 0 && (
+        <p className="px-3 py-1.5 text-sm text-gray-400 dark:text-gray-500">No suggestions found</p>
+      )}
       {spell.suggestions.slice(0, 5).map((word) => (
         <button
           key={word}
@@ -204,6 +207,11 @@ function SpellSuggestions({
           <span className="flex-1 text-left">{word}</span>
         </button>
       ))}
+      <Sep />
+      <Item icon={Plus} label="Add to Dictionary"
+        onClick={() => run(() => window.api.addWordToDictionary(spell.misspelledWord))} />
+      <Item icon={EyeOff} label="Ignore"
+        onClick={() => run(() => window.api.ignoreWord(spell.misspelledWord))} />
       <Sep />
     </>
   )
@@ -372,6 +380,7 @@ export function EditorContextMenu({
   return (
     <div
       ref={ref}
+      onMouseDown={(e) => e.preventDefault()}
       className="fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl py-1.5 overflow-visible"
       style={{ left: x, top: y, width: menuWidth, maxHeight: menuHeight }}
     >

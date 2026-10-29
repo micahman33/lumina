@@ -15,8 +15,9 @@ export const IPC = {
   RECENT_REVEAL: 'recent:reveal',
   RECENT_RENAME: 'recent:rename',
   // Spell-check
-  SPELL_GET: 'spell:get-suggestions',
   SPELL_REPLACE: 'spell:replace',
+  SPELL_ADD_WORD: 'spell:add-word',
+  SPELL_IGNORE_WORD: 'spell:ignore-word',
   // Export
   EXPORT_HTML: 'export:html',
   EXPORT_PDF: 'export:pdf',
@@ -27,7 +28,9 @@ export const IPC = {
   PUSH_OPEN_FILE: 'push:open-file',
   PUSH_MENU_SAVE: 'push:menu-save',
   PUSH_MENU_SAVE_AS: 'push:menu-save-as',
-  PUSH_THEME_CHANGE: 'push:theme-change'
+  PUSH_THEME_CHANGE: 'push:theme-change',
+  // Fired from Chromium's native context-menu event, carrying OS spell-check data
+  PUSH_CONTEXT_MENU: 'push:context-menu'
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]

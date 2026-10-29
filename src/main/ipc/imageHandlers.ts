@@ -57,8 +57,10 @@ export function registerMediaProtocol(): void {
       // On Windows, URL.pathname starts with an extra / before the drive letter
       // (e.g. /C:/Users/...) — strip it so Node.js opens the correct path.
       if (/^\/[A-Za-z]:[\\/]/.test(filePath)) filePath = filePath.slice(1)
+      // Serve images only — a document must not be able to read arbitrary files via media://
+      const mime = MIME_MAP[extname(filePath).toLowerCase()]
+      if (!mime) return new Response('forbidden', { status: 403 })
       const data = await readFile(filePath)
-      const mime = MIME_MAP[extname(filePath).toLowerCase()] ?? 'application/octet-stream'
       return new Response(data, { headers: { 'Content-Type': mime } })
     } catch (err) {
       console.error('[Lumina] media:// error for:', filePath, err)

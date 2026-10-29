@@ -222,7 +222,10 @@ export const webApiMock = {
     return URL.createObjectURL(blob)
   },
 
-  // Spell check — no-op
-  getSpellSuggestions: async () => ({ misspelledWord: '', suggestions: [] as string[] }),
+  // Spell check — no native spellchecker in the browser build
+  onContextMenu: () => () => {},
   replaceMisspelling: noop,
+  addWordToDictionary: noop,
+  ignoreWord: noop,
+  getPathForFile: () => '',
 }

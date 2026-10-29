@@ -90,10 +90,22 @@ const api = {
   pasteImage: (args: { buffer: number[]; mimeType: string; documentPath: string | null }): Promise<string> =>
     ipcRenderer.invoke(IPC.PASTE_IMAGE, args),
 
-  getSpellSuggestions: (): Promise<{ misspelledWord: string; suggestions: string[] }> =>
-    ipcRenderer.invoke(IPC.SPELL_GET),
+  onContextMenu: (
+    callback: (data: { x: number; y: number; misspelledWord: string; suggestions: string[] }) => void
+  ): (() => void) => {
+    const handler = (
+      _: Electron.IpcRendererEvent,
+      data: { x: number; y: number; misspelledWord: string; suggestions: string[] }
+    ): void => callback(data)
+    ipcRenderer.on(IPC.PUSH_CONTEXT_MENU, handler)
+    return () => ipcRenderer.removeListener(IPC.PUSH_CONTEXT_MENU, handler)
+  },
 
   replaceMisspelling: (word: string): void => ipcRenderer.send(IPC.SPELL_REPLACE, word),
+
+  addWordToDictionary: (word: string): void => ipcRenderer.send(IPC.SPELL_ADD_WORD, word),
+
+  ignoreWord: (word: string): void => ipcRenderer.send(IPC.SPELL_IGNORE_WORD, word),
 
   // Electron 32+ removed the non-standard File.path property. webUtils.getPathForFile is
   // the supported replacement and must be called in the preload (not the renderer) because
