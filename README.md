@@ -40,9 +40,24 @@ Lumina is a WYSIWYG desktop editor for Markdown and plain text files. You write 
 | macOS (Apple Silicon) | [Lumina-1.6.11-arm64.dmg](https://github.com/micahman33/lumina/releases/download/v1.6.11/Lumina-1.6.11-arm64.dmg) | macOS 13+ · M1/M2/M3/M4 |
 | Windows (x64) | [Lumina Setup 1.6.11.exe](https://github.com/micahman33/lumina/releases/download/v1.6.11/Lumina.Setup.1.6.11.exe) | Windows 10/11 |
 
-**macOS:** Download the `.dmg`, drag Lumina to `/Applications`. On first launch, if macOS shows an "unverified developer" warning, right-click the app and choose **Open**.
+**macOS:** Download the `.dmg` and drag Lumina to `/Applications`.
 
-**Windows:** Run the installer — Lumina is added to your Start Menu and Desktop automatically.
+> [!IMPORTANT]
+> **Lumina isn't signed with an Apple Developer ID yet, so macOS will block it the first time you open it.** This is expected, and it's a one-time step:
+>
+> 1. Open Lumina. macOS shows a warning and refuses. Click **Done** (or **OK**).
+> 2. Open **System Settings → Privacy & Security**, scroll down to the Security section, and click **Open Anyway** next to "Lumina was blocked".
+> 3. Enter your password or Touch ID, then click **Open Anyway** once more.
+>
+> On macOS 14 and earlier you can instead right-click Lumina and choose **Open**. That shortcut was removed in macOS 15 (Sequoia).
+>
+> If macOS says the app is **"damaged and can't be opened"**, run this once in Terminal, then open it again:
+>
+> ```bash
+> xattr -dr com.apple.quarantine /Applications/Lumina.app
+> ```
+
+**Windows:** Run the installer — Lumina is added to your Start Menu and Desktop automatically. If SmartScreen shows "Windows protected your PC" (the installer isn't code-signed yet), click **More info → Run anyway**.
 
 ---
 
