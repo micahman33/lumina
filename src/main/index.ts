@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, nativeTheme, protocol, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, nativeTheme, protocol, session, shell } from 'electron'
 import { join } from 'path'
 import { registerAllHandlers } from './ipc'
 import { registerMediaProtocol } from './ipc/imageHandlers'
@@ -6,13 +6,54 @@ import { buildMenu } from './menu'
 import { applyWindowState, trackWindowState } from './windowState'
 import { initUpdater } from './updater'
 import { IPC } from '../renderer/src/types/ipc'
+import store from './store'
+import { findFileArg, setPendingOpenPath } from './pendingOpen'
 
 let mainWindow: BrowserWindow | null = null
-let pendingOpenPath: string | null = null
 let allowClose = false
+// Set when the user picked "Save" on the close prompt during a quit, so the quit resumes
+// once the renderer reports the save finished.
+let quitAfterSave = false
 // Words the user chose to "Ignore". Chromium has no per-session ignore list, so they are
-// added to the spellchecker dictionary and removed again on quit.
+// added to the spellchecker dictionary and removed again on quit. The list is also kept in
+// the store so a crash (or a removal that didn't flush) is cleaned up on the next launch.
 const ignoredWords = new Set<string>()
+
+function forgetIgnoredWords(): void {
+  const words = new Set([...ignoredWords, ...store.get('ignoredWords')])
+  for (const word of words) session.defaultSession.removeWordFromSpellCheckerDictionary(word)
+  ignoredWords.clear()
+  store.set('ignoredWords', [])
+}
+
+/** Hand a file to the renderer, or hold it until the renderer asks for its initial file. */
+function openPathInWindow(path: string): void {
+  if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isLoading()) {
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.focus()
+    mainWindow.webContents.send(IPC.PUSH_OPEN_FILE, path)
+  } else {
+    setPendingOpenPath(path)
+  }
+}
+
+// One running copy per user: on Windows, double-clicking a document while Lumina is open
+// starts a second process, which hands its file to the first and exits. Packaged builds
+// only, so `npm run dev` still works while the installed app is open.
+if (app.isPackaged) {
+  if (!app.requestSingleInstanceLock()) {
+    app.quit()
+  } else {
+    app.on('second-instance', (_e, argv) => {
+      const path = findFileArg(argv.slice(1))
+      if (path) openPathInWindow(path)
+      else if (mainWindow && !mainWindow.isDestroyed()) {
+        if (mainWindow.isMinimized()) mainWindow.restore()
+        mainWindow.focus()
+      }
+    })
+  }
+}
 // Tracks whether the window close was triggered by Cmd+Q / app.quit()
 // so we can call app.quit() again after our async dialog finishes.
 let isQuitting = false
@@ -20,10 +61,7 @@ let isQuitting = false
 // Must be registered before app.on('ready') on macOS
 app.on('open-file', (event, path) => {
   event.preventDefault()
-  pendingOpenPath = path
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send(IPC.PUSH_OPEN_FILE, path)
-  }
+  openPathInWindow(path)
 })
 
 // Set the quitting flag as early as possible so the close handler can read it.
@@ -33,11 +71,8 @@ app.on('before-quit', () => {
 
 // Runs only once quitting is really under way (before-quit also fires if the user cancels
 // the unsaved-changes dialog), so "Ignore"d words stay ignored for the whole session.
-app.on('will-quit', () => {
-  const ses = mainWindow && !mainWindow.isDestroyed() ? mainWindow.webContents.session : null
-  if (ses) for (const word of ignoredWords) ses.removeWordFromSpellCheckerDictionary(word)
-  ignoredWords.clear()
-})
+// The window is already gone by now, so this must not go through mainWindow.
+app.on('will-quit', forgetIgnoredWords)
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'media', privileges: { secure: true, standard: true, bypassCSP: true } }
@@ -50,6 +85,7 @@ function createWindow(): void {
   // Reset per-window flags
   allowClose = false
   isQuitting = false
+  quitAfterSave = false
 
   // Resolve icon relative to the app root (works both in dev and after packaging)
   const appRoot = app.isPackaged ? join(__dirname, '../../..') : join(__dirname, '../../..')
@@ -108,10 +144,6 @@ function createWindow(): void {
 
   mainWindow.once('ready-to-show', () => {
     mainWindow!.show()
-    if (pendingOpenPath) {
-      mainWindow!.webContents.send(IPC.PUSH_OPEN_FILE, pendingOpenPath)
-      pendingOpenPath = null
-    }
     // Only check for updates in packaged builds — not during development
     if (app.isPackaged) initUpdater(mainWindow!)
   })
@@ -158,14 +190,11 @@ function createWindow(): void {
     if (!mainWindow || mainWindow.isDestroyed()) return
 
     if (choice === 0) {
-      mainWindow.webContents.send(IPC.PUSH_MENU_SAVE)
-      setTimeout(() => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          allowClose = true
-          mainWindow.close()
-        }
-        if (shouldQuit) app.quit()
-      }, 500)
+      // The renderer saves (showing Save As for an untitled document) and answers with
+      // CLOSE_AFTER_SAVE only if the save really happened. If it fails or is cancelled the
+      // window simply stays open.
+      quitAfterSave = shouldQuit
+      mainWindow.webContents.send(IPC.PUSH_SAVE_AND_CLOSE)
     } else if (choice === 1) {
       allowClose = true
       mainWindow.close()
@@ -189,6 +218,10 @@ app.whenReady().then(() => {
   registerAllHandlers()
   registerMediaProtocol()
 
+  // Words left over from a session that didn't shut down cleanly
+  forgetIgnoredWords()
+  setPendingOpenPath(findFileArg(process.argv.slice(1)))
+
   // Renderer picked a suggestion — use Chromium's built-in replaceMisspelling
   ipcMain.on(IPC.SPELL_REPLACE, (_e, word: string) => {
     if (typeof word === 'string') mainWindow?.webContents.replaceMisspelling(word)
@@ -198,6 +231,8 @@ app.whenReady().then(() => {
   ipcMain.on(IPC.SPELL_ADD_WORD, (_e, word: string) => {
     if (typeof word === 'string' && word.trim()) {
       mainWindow?.webContents.session.addWordToSpellCheckerDictionary(word)
+      // A word that was only ignored is now a keeper — don't remove it on quit
+      if (ignoredWords.delete(word)) store.set('ignoredWords', [...ignoredWords])
     }
   })
 
@@ -206,6 +241,7 @@ app.whenReady().then(() => {
     if (typeof word === 'string' && word.trim()) {
       mainWindow?.webContents.session.addWordToSpellCheckerDictionary(word)
       ignoredWords.add(word)
+      store.set('ignoredWords', [...ignoredWords])
     }
   })
 
@@ -217,10 +253,12 @@ app.whenReady().then(() => {
   })
 
   // Sent by renderer after it finishes saving when close was triggered
-  ipcMain.on('app:close-after-save', () => {
+  ipcMain.on(IPC.CLOSE_AFTER_SAVE, () => {
+    const shouldQuit = quitAfterSave
+    quitAfterSave = false
     allowClose = true
     mainWindow?.close()
-    if (isQuitting) app.quit()
+    if (shouldQuit) app.quit()
   })
 
   // Push OS theme changes to the renderer

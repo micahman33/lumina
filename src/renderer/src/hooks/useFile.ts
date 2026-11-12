@@ -16,12 +16,14 @@ export function useFile(editor: Editor | null): {
   saveFileAs: () => Promise<void>
   newFile: () => void
   openFilePath: (path: string) => Promise<void>
+  openDraft: () => void
 } {
   const setFile = useAppStore((s) => s.setFile)
   const markDirty = useAppStore((s) => s.markDirty)
   const setRecentFiles = useAppStore((s) => s.setRecentFiles)
   const saveDraft = useAppStore((s) => s.saveDraft)
   const clearDraft = useAppStore((s) => s.clearDraft)
+  const showToast = useAppStore((s) => s.showToast)
 
   /** Add to recents without reordering existing entries mid-session. */
   const stableAddRecent = useCallback(
@@ -78,6 +80,37 @@ export function useFile(editor: Editor | null): {
   }, [editor])
 
   /**
+   * Write the current document to disk and report whether it is now safely saved.
+   * The document is only marked clean if nothing was typed while the write was in flight —
+   * otherwise those keystrokes would be flagged as saved and never auto-saved.
+   */
+  const writeCurrentFile = useCallback(async (): Promise<boolean> => {
+    const { path } = useAppStore.getState().file
+    if (!path || !editor) return false
+    const docAtSave = editor.state.doc
+    const ok = await window.api.saveFile(path, getContent())
+    if (!ok) {
+      showToast(`Couldn't save ${path.split(/[/\\]/).pop()}`, 'error')
+      return false
+    }
+    if (useAppStore.getState().file.path === path && editor.state.doc.eq(docAtSave)) {
+      markDirty(false)
+    }
+    return true
+  }, [editor, getContent, markDirty, showToast])
+
+  /**
+   * Auto-save runs 2 s after the last keystroke, so switching documents inside that window
+   * would otherwise discard the newest edits. Every "switch away" action awaits this first.
+   * Returns false if the save failed, in which case the caller must not switch.
+   */
+  const flushPendingSave = useCallback(async (): Promise<boolean> => {
+    const { path, isDirty } = useAppStore.getState().file
+    if (!path || !isDirty) return true
+    return writeCurrentFile()
+  }, [writeCurrentFile])
+
+  /**
    * If there's an unsaved new file with content, snapshot it to the draft store
    * before switching away.  Called at the top of every "open" action.
    */
@@ -92,55 +125,56 @@ export function useFile(editor: Editor | null): {
 
   const openFilePath = useCallback(
     async (path: string) => {
+      if (path === useAppStore.getState().file.path) return
+      if (!(await flushPendingSave())) return
       snapshotDraftIfNeeded()
       const result = await window.api.openFilePath(path)
-      if (!result) return
+      if (!result) {
+        showToast(`Couldn't open ${path.split(/[/\\]/).pop()}`, 'error')
+        return
+      }
       const fileType = detectFileType(result.path)
       setFile({ path: result.path, content: result.content, isDirty: false, fileType })
       loadContent(result.content, fileType, result.path)
       await stableAddRecent(result.path, extractSnippet(result.content, fileType))
       document.title = `${result.path.split(/[/\\]/).pop()} — Lumina`
     },
-    [setFile, loadContent, stableAddRecent, snapshotDraftIfNeeded]
+    [setFile, loadContent, stableAddRecent, snapshotDraftIfNeeded, flushPendingSave, showToast]
   )
 
-  const newFile = useCallback(() => {
+  const newFile = useCallback(async () => {
+    if (!(await flushPendingSave())) return
     snapshotDraftIfNeeded()
     setFile({ path: null, content: '', isDirty: false, fileType: 'md' })
     editor?.commands.setContent('')
+    // setContent emits an update, which flags the document dirty — a blank file isn't
+    markDirty(false)
     document.title = 'Untitled — Lumina'
-  }, [editor, setFile, snapshotDraftIfNeeded])
+  }, [editor, setFile, markDirty, snapshotDraftIfNeeded, flushPendingSave])
 
   /** Restore the in-memory draft into the editor. */
-  const openDraft = useCallback(() => {
+  const openDraft = useCallback(async () => {
     const { draft } = useAppStore.getState()
     if (!draft || !editor) return
+    if (!(await flushPendingSave())) return
     setFile({ path: null, content: draft.content, isDirty: true, fileType: 'md' })
     loadContent(draft.content, 'md', null)
+    // loadContent leaves the document clean, but a draft is by definition unsaved
+    markDirty(true)
     document.title = 'Unsaved draft — Lumina'
-  }, [editor, setFile, loadContent])
+  }, [editor, setFile, loadContent, markDirty, flushPendingSave])
 
   const openFile = useCallback(async () => {
-    snapshotDraftIfNeeded()
     const result = await window.api.openFile()
     if (!result) return
+    if (!(await flushPendingSave())) return
+    snapshotDraftIfNeeded()
     const fileType = detectFileType(result.path)
     setFile({ path: result.path, content: result.content, isDirty: false, fileType })
     loadContent(result.content, fileType, result.path)
     await stableAddRecent(result.path, extractSnippet(result.content, fileType))
     document.title = `${result.path.split(/[/\\]/).pop()} — Lumina`
-  }, [setFile, loadContent, stableAddRecent, snapshotDraftIfNeeded])
-
-  const saveFile = useCallback(async () => {
-    const state = useAppStore.getState()
-    if (!state.file.path) { await saveFileAs(); return }
-    const content = getContent()
-    const ok = await window.api.saveFile(state.file.path, content)
-    if (ok) {
-      markDirty(false)
-      ;(window as Window & { __lumina_isDirty__?: boolean }).__lumina_isDirty__ = false
-    }
-  }, [getContent, markDirty])
+  }, [setFile, loadContent, stableAddRecent, snapshotDraftIfNeeded, flushPendingSave])
 
   const saveFileAs = useCallback(async () => {
     const content = getContent()
@@ -155,6 +189,11 @@ export function useFile(editor: Editor | null): {
     document.title = `${result.path.split(/[/\\]/).pop()} — Lumina`
   }, [getContent, setFile, markDirty, clearDraft, stableAddRecent])
 
+  const saveFile = useCallback(async () => {
+    if (!useAppStore.getState().file.path) { await saveFileAs(); return }
+    await writeCurrentFile()
+  }, [saveFileAs, writeCurrentFile])
+
   // Menu-triggered open / save
   useEffect(() => {
     const unsubSave = window.api.onMenuSave(() => saveFile())
@@ -163,7 +202,13 @@ export function useFile(editor: Editor | null): {
       if (path === null) newFile()
       else openFilePath(path)
     })
-    return () => { unsubSave(); unsubSaveAs(); unsubOpen() }
+    // "Save" on the close prompt: only let the window close if the save really happened
+    // (the user may cancel Save As, or the write may fail).
+    const unsubClose = window.api.onSaveAndClose(async () => {
+      await saveFile()
+      if (!useAppStore.getState().file.isDirty) window.api.closeAfterSave()
+    })
+    return () => { unsubSave(); unsubSaveAs(); unsubOpen(); unsubClose() }
   }, [saveFile, saveFileAs, openFilePath, newFile])
 
   // Load initial file (CLI / most recent / welcome)

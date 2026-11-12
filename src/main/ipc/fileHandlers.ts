@@ -1,9 +1,10 @@
 import { ipcMain, dialog, BrowserWindow, app, shell } from 'electron'
-import { readFile, writeFile, mkdir, rename } from 'fs/promises'
+import { readFile, writeFile, mkdir, rename, access } from 'fs/promises'
 import { basename, extname, join, dirname } from 'path'
 import { IPC } from '../../renderer/src/types/ipc'
 import store from '../store'
 import { WELCOME_CONTENT } from '../welcome'
+import { takePendingOpenPath } from '../pendingOpen'
 import type { OpenFileResult, RecentFile } from '../../renderer/src/types/file'
 
 /** ~/Documents/Lumina — default home for all Lumina files */
@@ -13,6 +14,17 @@ export function luminaDir(): string {
 
 async function ensureLuminaDir(): Promise<void> {
   await mkdir(luminaDir(), { recursive: true })
+}
+
+/** Returns a user-facing reason the name can't be used, or null if it is fine. */
+export function validateFileName(name: string): string | null {
+  if (typeof name !== 'string' || !name.trim()) return 'The file name can\'t be empty'
+  if (name === '.' || name === '..') return 'That name isn\'t allowed'
+  // Path separators would move the file to another folder; the rest are illegal on Windows
+  if (/[\\/:*?"<>|\u0000-\u001f]/.test(name)) {
+    return 'A file name can\'t contain any of: \\ / : * ? " < > |'
+  }
+  return null
 }
 
 export function registerFileHandlers(): void {
@@ -77,9 +89,8 @@ export function registerFileHandlers(): void {
 
   ipcMain.handle(IPC.FILE_READ_INITIAL, async (): Promise<OpenFileResult | null> => {
     // 1. CLI / Open With argument takes highest priority
-    const fileArg = process.argv.find((a) =>
-      /\.(md|markdown|txt)$/i.test(a) && !a.startsWith('-')
-    )
+    //    (macOS open-file events that arrived before the window was ready land here too)
+    const fileArg = takePendingOpenPath()
     if (fileArg) {
       try {
         const raw = await readFile(fileArg, 'utf8')
@@ -159,9 +170,17 @@ export function registerFileHandlers(): void {
     shell.showItemInFolder(path)
   })
 
-  ipcMain.handle(IPC.RECENT_RENAME, async (_, oldPath: string, newName: string): Promise<{ newPath: string } | null> => {
+  ipcMain.handle(IPC.RECENT_RENAME, async (_, oldPath: string, newName: string): Promise<{ newPath: string } | { error: string }> => {
+    const invalid = validateFileName(newName)
+    if (invalid) return { error: invalid }
     try {
       const newPath = join(dirname(oldPath), newName)
+      // fs.rename silently replaces an existing file. A case-only change (notes.md →
+      // Notes.md) resolves to the same file on case-insensitive disks, so let that through.
+      if (newPath.toLowerCase() !== oldPath.toLowerCase()) {
+        const taken = await access(newPath).then(() => true, () => false)
+        if (taken) return { error: `A file named "${newName}" already exists in this folder` }
+      }
       await rename(oldPath, newPath)
       // Update the entry in recents
       const files = store.get('recentFiles')
@@ -171,7 +190,7 @@ export function registerFileHandlers(): void {
       store.set('recentFiles', updated)
       return { newPath }
     } catch {
-      return null
+      return { error: `Couldn't rename the file to "${newName}"` }
     }
   })
 

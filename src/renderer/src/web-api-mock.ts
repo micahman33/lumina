@@ -169,11 +169,12 @@ export const webApiMock = {
   renameFile: async (
     oldPath: string,
     newName: string,
-  ): Promise<{ newPath: string } | null> => {
+  ): Promise<{ newPath: string } | { error: string }> => {
     const content = fileStore.get(oldPath)
-    if (content === undefined) return null
+    if (content === undefined) return { error: `Couldn't rename the file to "${newName}"` }
     const dir = oldPath.split('/').slice(0, -1).join('/')
     const newPath = `${dir}/${newName}`
+    if (fileStore.has(newPath)) return { error: `A file named "${newName}" already exists in this folder` }
     fileStore.delete(oldPath)
     fileStore.set(newPath, content)
     recentFiles = recentFiles.map((f) =>
@@ -193,6 +194,8 @@ export const webApiMock = {
   onOpenFile: noopUnsub,
   onMenuSave: noopUnsub,
   onMenuSaveAs: noopUnsub,
+  onSaveAndClose: noopUnsub,
+  closeAfterSave: noop,
   onThemeChange: noopUnsub,
 
   // Shell

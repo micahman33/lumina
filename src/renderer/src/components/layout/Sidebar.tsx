@@ -37,6 +37,7 @@ export function Sidebar({ onOpenFile, onNewFile, onOpenDraft }: SidebarProps): J
   const activeDirty = useAppStore((s) => s.file.isDirty)
   const draft = useAppStore((s) => s.draft)
   const setFile = useAppStore((s) => s.setFile)
+  const showToast = useAppStore((s) => s.showToast)
   const [query, setQuery] = useState('')
   const [ctxMenu, setCtxMenu] = useState<CtxMenu | null>(null)
   const [renamingPath, setRenamingPath] = useState<string | null>(null)
@@ -139,7 +140,10 @@ export function Sidebar({ onOpenFile, onNewFile, onOpenDraft }: SidebarProps): J
     setRenamingPath(null)
     if (!newName || newName === recentFiles.find((f) => f.path === renamingPath)?.name) return
     const result = await window.api.renameFile(renamingPath, newName)
-    if (!result) return
+    if ('error' in result) {
+      showToast(result.error, 'error')
+      return
+    }
     // Update local recents state
     setRecentFiles(
       recentFiles.map((f) => f.path === renamingPath ? { ...f, path: result.newPath, name: newName } : f)

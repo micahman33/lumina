@@ -28,6 +28,9 @@ export const IPC = {
   PUSH_OPEN_FILE: 'push:open-file',
   PUSH_MENU_SAVE: 'push:menu-save',
   PUSH_MENU_SAVE_AS: 'push:menu-save-as',
+  // Close prompt → "Save": renderer saves, then replies CLOSE_AFTER_SAVE if it succeeded
+  PUSH_SAVE_AND_CLOSE: 'push:save-and-close',
+  CLOSE_AFTER_SAVE: 'app:close-after-save',
   PUSH_THEME_CHANGE: 'push:theme-change',
   // Fired from Chromium's native context-menu event, carrying OS spell-check data
   PUSH_CONTEXT_MENU: 'push:context-menu'

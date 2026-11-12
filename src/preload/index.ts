@@ -40,7 +40,7 @@ const api = {
   revealFile: (path: string): Promise<void> =>
     ipcRenderer.invoke(IPC.RECENT_REVEAL, path),
 
-  renameFile: (oldPath: string, newName: string): Promise<{ newPath: string } | null> =>
+  renameFile: (oldPath: string, newName: string): Promise<{ newPath: string } | { error: string }> =>
     ipcRenderer.invoke(IPC.RECENT_RENAME, oldPath, newName),
 
   getSettings: (): Promise<AppSettings> => ipcRenderer.invoke(IPC.SETTINGS_GET),
@@ -65,6 +65,14 @@ const api = {
     ipcRenderer.on(IPC.PUSH_MENU_SAVE_AS, handler)
     return () => ipcRenderer.removeListener(IPC.PUSH_MENU_SAVE_AS, handler)
   },
+
+  onSaveAndClose: (callback: () => void): (() => void) => {
+    const handler = (): void => callback()
+    ipcRenderer.on(IPC.PUSH_SAVE_AND_CLOSE, handler)
+    return () => ipcRenderer.removeListener(IPC.PUSH_SAVE_AND_CLOSE, handler)
+  },
+
+  closeAfterSave: (): void => ipcRenderer.send(IPC.CLOSE_AFTER_SAVE),
 
   onThemeChange: (callback: (theme: 'light' | 'dark') => void): (() => void) => {
     const handler = (_: Electron.IpcRendererEvent, theme: 'light' | 'dark'): void =>
