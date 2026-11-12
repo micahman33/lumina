@@ -1,4 +1,4 @@
-import type { FileType } from '../types/file'
+import type { FileType, ViewKind } from '../types/file'
 
 /** Minimal interface for a ProseMirror-like node — used for testing without a real editor */
 export interface TxtNode {
@@ -15,14 +15,32 @@ export interface TxtDoc {
 /** Derive file type from extension. */
 export function detectFileType(path: string | null): FileType {
   if (!path) return 'md'
-  const ext = path.split('.').pop()?.toLowerCase()
-  if (ext === 'txt') return 'txt'
-  return 'md'
+  const name = path.split(/[/\\]/).pop() ?? ''
+  const dot = name.lastIndexOf('.')
+  const ext = dot > 0 ? name.slice(dot + 1).toLowerCase() : ''
+  return EXTENSION_TYPES[ext] ?? 'text'
+}
+
+const EXTENSION_TYPES: Record<string, FileType> = {}
+const register = (type: FileType, exts: string): void => {
+  for (const e of exts.split(' ')) EXTENSION_TYPES[e] = type
+}
+register('md', 'md markdown')
+register('txt', 'txt')
+register('json', 'json geojson webmanifest')
+register('xml', 'xml svg xsd xsl xslt plist rss atom xhtml')
+register('csv', 'csv tsv')
+
+/** Which editor shows a file of this type. */
+export function viewKindFor(fileType: FileType, viewAsText = false): ViewKind {
+  if (fileType === 'md' || fileType === 'txt') return 'rich'
+  if (fileType === 'csv' && !viewAsText) return 'table'
+  return 'code'
 }
 
 /** Strip Markdown syntax to produce a plain-text snippet for search indexing. */
 export function extractSnippet(content: string, fileType: FileType = 'md', maxLen = 300): string {
-  if (fileType === 'txt') return content.replace(/\n+/g, ' ').trim().slice(0, maxLen)
+  if (fileType !== 'md') return content.slice(0, maxLen * 4).replace(/\s+/g, ' ').trim().slice(0, maxLen)
   return content
     .replace(/^#{1,6}\s+/gm, '')
     .replace(/\*\*(.+?)\*\*/g, '$1')

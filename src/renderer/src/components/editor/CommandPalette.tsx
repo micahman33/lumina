@@ -121,9 +121,20 @@ interface CommandContext {
   onSaveFile: () => void
   onSaveFileAs: () => void
   onNewFile: () => void
+  onOpenFilePath: (path: string) => void
   onExportHtml: () => void
   onExportPdf: () => void
   onExportDocx: () => void
+}
+
+/** Commands that only make sense for a Markdown / rich-text document. */
+function isRichOnly(cmd: CommandDef): boolean {
+  return (
+    cmd.category === 'format' ||
+    cmd.category === 'insert' ||
+    cmd.id.startsWith('file:export-') ||
+    ['view:toggle-outline', 'view:find-replace', 'view:focus-mode'].includes(cmd.id)
+  )
 }
 
 const STATIC_COMMANDS: CommandDef[] = [
@@ -392,15 +403,7 @@ function buildRecentCommands(recentFiles: RecentFile[]): CommandDef[] {
     category: 'recent' as Category,
     icon: Clock,
     keywords: [f.path, f.name],
-    action: () => {
-      // Opening a recent file is triggered via the IPC / file API — we just
-      // dispatch the open dialog with the path pre-filled. In practice the
-      // caller can wire this up; for now we use the IPC helper if available.
-      const api = (window as Window & { api?: { openFile?: (path: string) => void } }).api
-      if (api?.openFile) {
-        api.openFile(f.path)
-      }
-    },
+    action: (ctx) => ctx.onOpenFilePath(f.path),
   }))
 }
 
@@ -437,6 +440,9 @@ interface CommandPaletteProps {
   onSaveFile: () => void
   onSaveFileAs: () => void
   onNewFile: () => void
+  onOpenFilePath: (path: string) => void
+  /** False for code, table and binary views: Markdown-only commands are hidden. */
+  richView: boolean
   onExportHtml: () => void
   onExportPdf: () => void
   onExportDocx: () => void
@@ -448,6 +454,8 @@ export function CommandPalette({
   onSaveFile,
   onSaveFileAs,
   onNewFile,
+  onOpenFilePath,
+  richView,
   onExportHtml,
   onExportPdf,
   onExportDocx,
@@ -476,7 +484,9 @@ export function CommandPalette({
     },
   }
 
-  const allCommands = [...STATIC_COMMANDS, focusModeCommand, ...buildRecentCommands(recentFiles)]
+  const allCommands = [...STATIC_COMMANDS, focusModeCommand, ...buildRecentCommands(recentFiles)].filter(
+    (cmd) => richView || !isRichOnly(cmd)
+  )
   const results = filterAndSort(query, allCommands)
 
   // Reset state when opening
@@ -501,10 +511,10 @@ export function CommandPalette({
   const execute = useCallback(
     (cmd: CommandDef) => {
       close()
-      const ctx: CommandContext = { editor, onOpenFile, onSaveFile, onSaveFileAs, onNewFile, onExportHtml, onExportPdf, onExportDocx }
+      const ctx: CommandContext = { editor, onOpenFile, onSaveFile, onSaveFileAs, onNewFile, onOpenFilePath, onExportHtml, onExportPdf, onExportDocx }
       cmd.action(ctx)
     },
-    [close, editor, onOpenFile, onSaveFile, onSaveFileAs, onNewFile, onExportHtml, onExportPdf, onExportDocx]
+    [close, editor, onOpenFile, onSaveFile, onSaveFileAs, onNewFile, onOpenFilePath, onExportHtml, onExportPdf, onExportDocx]
   )
 
   const handleKeyDown = useCallback(

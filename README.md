@@ -29,6 +29,8 @@
 
 Lumina is a WYSIWYG desktop editor for Markdown and plain text files. You write formatted text — Lumina handles the Markdown syntax behind the scenes. Open any `.md` or `.txt` file and it just works. No vault setup, no plugins, no configuration.
 
+It also opens the other text files you run into every day: JSON and XML pretty-printed with error checking, CSV as an editable table, and logs, YAML and source code in a clean code view.
+
 *The best tool is the one you forget you're using.*
 
 ---
@@ -94,6 +96,13 @@ Lumina is a WYSIWYG desktop editor for Markdown and plain text files. You write 
 - **Toolbar insert** — pick a file via the system dialog using the image button in the toolbar
 - **Resize** — click any image to select it, then drag the corner handle to resize; the width is saved with the file
 
+### JSON, XML, CSV and other text files
+
+- **JSON and XML** — always shown and saved pretty-printed, with syntax colours, folding, and errors (bad commas, unclosed or mismatched tags) underlined in place. Formatting changes whitespace only, never your data
+- **CSV and TSV** — an editable table: edit cells, add and remove rows and columns, sort, undo. Rows you don't touch are saved back character for character. Switch to the raw text any time with **View as text**
+- **Everything else** — `.log`, `.yaml`, `.ini`, source code and extension-less files open in the code view, with syntax colours where recognised
+- **Safe by design** — opening a file never changes it; encoding and line endings are preserved; and Lumina won't overwrite a file another program has changed
+
 ### Tables
 
 - **Table Wizard** — hover over a grid in the toolbar to choose any size, click to insert
@@ -108,7 +117,7 @@ Lumina is a WYSIWYG desktop editor for Markdown and plain text files. You write 
 
 ### File management
 
-- **Open** — `⌘O` / `Ctrl+O`, File menu, drag a `.md` file onto the window, or double-click from Finder/Explorer
+- **Open** — `⌘O` / `Ctrl+O`, File menu, drag any file onto the window, or double-click from Finder/Explorer
 - **Save / Save As** — `⌘S` and `⌘⇧S` / `Ctrl+S` and `Ctrl+Shift+S`
 - **Auto-save** — changes are saved 2 seconds after you stop typing
 - **Unsaved draft** — switching away from an unsaved new file preserves it as a scratchpad in the sidebar; click "Unsaved draft" to return to it
@@ -160,6 +169,12 @@ All exports available from the toolbar **Export** button or the Command Palette.
 
 ## What's New
 
+### v1.7.0
+
+- **More file types** — JSON and XML pretty-printed with error checking, CSV as an editable table, and logs or any other text file in a code view
+- **Safer saving** — Lumina won't overwrite a file changed by another program, keeps encodings and line endings intact, and no longer loses edits when you switch files quickly
+- **Fixes** — close-prompt Save, sidebar rename, spell-check Ignore, Command Palette commands, single window on Windows
+
 ### v1.6.11
 
 - **Spell-check suggestions** — right-click a misspelled word for OS-dictionary suggestions, plus Add to Dictionary and Ignore (finally working on macOS and Windows)
@@ -168,11 +183,6 @@ All exports available from the toolbar **Export** button or the Command Palette.
 ### v1.6.9
 
 - **Image insertion fix** — toolbar image picker now works correctly on all supported Electron versions (fixes a regression introduced in Electron 32)
-
-### v1.6.7
-
-- **Image resizing** — click any image to select it, then drag the handle at the bottom-right corner to resize; width persists on save
-- **PDF export** — fixed margin issue that was causing layout problems on export
 
 [Full changelog →](CHANGELOG.md)
 

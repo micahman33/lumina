@@ -62,7 +62,7 @@ function Tip({
   )
 }
 
-function TB({
+export function TB({
   label,
   active,
   disabled,
@@ -104,7 +104,7 @@ function TB({
   )
 }
 
-function Sep(): JSX.Element {
+export function Sep(): JSX.Element {
   return (
     <div style={{ width: 1, height: 16, background: 'var(--lm-border)', margin: '0 6px', flexShrink: 0 }} />
   )

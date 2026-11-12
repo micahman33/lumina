@@ -9,7 +9,7 @@ export function App(): JSX.Element | null {
   useRecentFiles()
 
   const editor = useEditor()
-  const { openFile, saveFile, openFilePath, newFile, openDraft } = useFile(editor)
+  const { openFile, saveFile, saveFileAs, openFilePath, newFile, openDraft } = useFile(editor)
 
   if (!editor) return null
 
@@ -18,6 +18,7 @@ export function App(): JSX.Element | null {
       editor={editor}
       onOpenFile={openFile}
       onSaveFile={saveFile}
+      onSaveFileAs={saveFileAs}
       onOpenFilePath={openFilePath}
       onNewFile={newFile}
       onOpenDraft={openDraft}

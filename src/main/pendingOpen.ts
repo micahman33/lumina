@@ -1,3 +1,5 @@
+import { statSync } from 'fs'
+
 /**
  * A file the OS asked us to open (macOS `open-file`, or a path on the command line)
  * before the renderer was ready to receive it. The renderer collects it through
@@ -15,7 +17,13 @@ export function takePendingOpenPath(): string | null {
   return path
 }
 
-/** First argument that looks like a document Lumina can open. */
+/** First argument that is an existing file (Chromium flags and the app folder are skipped). */
 export function findFileArg(argv: string[]): string | null {
-  return argv.find((a) => /\.(md|markdown|txt)$/i.test(a) && !a.startsWith('-')) ?? null
+  for (const arg of argv) {
+    if (arg.startsWith('-')) continue
+    try {
+      if (statSync(arg).isFile()) return arg
+    } catch { /* not a path */ }
+  }
+  return null
 }

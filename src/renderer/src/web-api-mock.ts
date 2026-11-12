@@ -3,7 +3,16 @@
  * Used by the standalone web build embedded in the landing page.
  * All file operations are in-memory; dialogs are no-ops.
  */
-import type { AppSettings, OpenFileResult, RecentFile } from './types/file'
+import { DEFAULT_META } from './types/file'
+import type { AppSettings, OpenFileResult, RecentFile, SaveResult } from './types/file'
+
+const opened = (path: string, content: string): OpenFileResult => ({
+  ...DEFAULT_META,
+  path,
+  content,
+  kind: 'text',
+  size: content.length,
+})
 
 const DEMO = [
   {
@@ -127,20 +136,20 @@ export const webApiMock = {
 
   openFilePath: async (path: string): Promise<OpenFileResult | null> => {
     const content = fileStore.get(path)
-    return content !== undefined ? { path, content } : null
+    return content !== undefined ? opened(path, content) : null
   },
 
-  saveFile: async (path: string, content: string): Promise<boolean> => {
+  saveFile: async (path: string, content: string): Promise<SaveResult> => {
     fileStore.set(path, content)
-    return true
+    return { ok: true, mtimeMs: Date.now() }
   },
+
+  statFile: async (): Promise<number | null> => null,
+  confirmConflict: async (): Promise<'overwrite' | 'reload' | 'cancel'> => 'overwrite',
 
   saveFileAs: (): Promise<null> => Promise.resolve(null),
 
-  readInitialFile: async (): Promise<OpenFileResult | null> => ({
-    path: DEMO[0].path,
-    content: DEMO[0].content,
-  }),
+  readInitialFile: async (): Promise<OpenFileResult | null> => opened(DEMO[0].path, DEMO[0].content),
 
   // Recents — in-memory
   getRecentFiles: async (): Promise<RecentFile[]> => recentFiles,

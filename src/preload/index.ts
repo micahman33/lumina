@@ -3,9 +3,11 @@ import { IPC } from '../renderer/src/types/ipc'
 import type {
   AppSettings,
   CopyImageArgs,
+  FileMeta,
   OpenFileResult,
   RecentFile,
-  SaveAsResult
+  SaveAsResult,
+  SaveResult
 } from '../renderer/src/types/file'
 
 const api = {
@@ -14,11 +16,17 @@ const api = {
   openFilePath: (path: string): Promise<OpenFileResult | null> =>
     ipcRenderer.invoke(IPC.FILE_OPEN_PATH, path),
 
-  saveFile: (path: string, content: string): Promise<boolean> =>
-    ipcRenderer.invoke(IPC.FILE_SAVE, path, content),
+  saveFile: (path: string, content: string, meta: FileMeta, force?: boolean): Promise<SaveResult> =>
+    ipcRenderer.invoke(IPC.FILE_SAVE, path, content, meta, force),
 
-  saveFileAs: (content: string, currentPath?: string): Promise<SaveAsResult | null> =>
-    ipcRenderer.invoke(IPC.FILE_SAVE_AS, content, currentPath),
+  saveFileAs: (content: string, currentPath: string | undefined, meta: FileMeta): Promise<SaveAsResult | null> =>
+    ipcRenderer.invoke(IPC.FILE_SAVE_AS, content, currentPath, meta),
+
+  /** Modification time of a file on disk, or null if it is gone. */
+  statFile: (path: string): Promise<number | null> => ipcRenderer.invoke(IPC.FILE_STAT, path),
+
+  confirmConflict: (name: string): Promise<'overwrite' | 'reload' | 'cancel'> =>
+    ipcRenderer.invoke(IPC.FILE_CONFIRM_CONFLICT, name),
 
   readInitialFile: (): Promise<OpenFileResult | null> =>
     ipcRenderer.invoke(IPC.FILE_READ_INITIAL),

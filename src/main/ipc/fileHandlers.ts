@@ -1,11 +1,13 @@
 import { ipcMain, dialog, BrowserWindow, app, shell } from 'electron'
-import { readFile, writeFile, mkdir, rename, access } from 'fs/promises'
+import { readFile, writeFile, mkdir, rename, access, stat } from 'fs/promises'
 import { basename, extname, join, dirname } from 'path'
 import { IPC } from '../../renderer/src/types/ipc'
 import store from '../store'
 import { WELCOME_CONTENT } from '../welcome'
 import { takePendingOpenPath } from '../pendingOpen'
-import type { OpenFileResult, RecentFile } from '../../renderer/src/types/file'
+import type { FileMeta, OpenFileResult, RecentFile, SaveAsResult, SaveResult } from '../../renderer/src/types/file'
+import { decodeBuffer, encodeText } from '../textFile'
+import { showOpenDocumentDialog } from '../openDialog'
 
 /** ~/Documents/Lumina — default home for all Lumina files */
 export function luminaDir(): string {
@@ -14,6 +16,51 @@ export function luminaDir(): string {
 
 async function ensureLuminaDir(): Promise<void> {
   await mkdir(luminaDir(), { recursive: true })
+}
+
+const LARGE_FILE_BYTES = 50 * 1024 * 1024
+
+/**
+ * Read a document from disk for the renderer. Returns null if the file can't be read or the
+ * user declines to open a very large one.
+ */
+export async function openPath(path: string): Promise<OpenFileResult | null> {
+  try {
+    const info = await stat(path)
+    if (!info.isFile()) return null
+    if (info.size > LARGE_FILE_BYTES) {
+      const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
+      const message = {
+        type: 'warning' as const,
+        buttons: ['Open Anyway', 'Cancel'],
+        defaultId: 1,
+        cancelId: 1,
+        message: `${basename(path)} is ${Math.round(info.size / 1024 / 1024)} MB`,
+        detail: 'Files this large can make Lumina slow or unresponsive.'
+      }
+      const { response } = win ? await dialog.showMessageBox(win, message) : await dialog.showMessageBox(message)
+      if (response !== 0) return null
+    }
+    const decoded = decodeBuffer(await readFile(path))
+    return { path, size: info.size, mtimeMs: info.mtimeMs, ...decoded }
+  } catch {
+    return null
+  }
+}
+
+/** Save As offers the document's own type first, so a .json stays a .json. */
+function saveFilters(currentPath?: string): Electron.FileFilter[] {
+  const ext = currentPath ? extname(currentPath).slice(1).toLowerCase() : ''
+  const markdown = [
+    { name: 'Markdown', extensions: ['md'] },
+    { name: 'Plain Text', extensions: ['txt'] }
+  ]
+  if (!ext || ext === 'md' || ext === 'markdown') return markdown
+  if (ext === 'txt') return [markdown[1], markdown[0]]
+  return [
+    { name: `${ext.toUpperCase()} file`, extensions: [ext] },
+    { name: 'All Files', extensions: ['*'] }
+  ]
 }
 
 /** Returns a user-facing reason the name can't be used, or null if it is fine. */
@@ -32,43 +79,55 @@ export function registerFileHandlers(): void {
   ensureLuminaDir().catch(() => {/* non-fatal */})
 
   ipcMain.handle(IPC.FILE_OPEN, async (): Promise<OpenFileResult | null> => {
-    const win = BrowserWindow.getFocusedWindow()
-    const result = await dialog.showOpenDialog(win!, {
-      defaultPath: luminaDir(),
-      filters: [
-        { name: 'All Supported', extensions: ['md', 'markdown', 'txt'] },
-        { name: 'Markdown', extensions: ['md', 'markdown'] },
-        { name: 'Plain Text', extensions: ['txt'] },
-      ],
-      properties: ['openFile']
-    })
-    if (result.canceled || !result.filePaths[0]) return null
-    const filePath = result.filePaths[0]
-    const raw = await readFile(filePath, 'utf8')
-    const content = raw.startsWith('﻿') ? raw.slice(1) : raw
-    return { path: filePath, content }
+    const filePath = await showOpenDocumentDialog(BrowserWindow.getFocusedWindow(), luminaDir())
+    return filePath ? openPath(filePath) : null
   })
 
-  ipcMain.handle(IPC.FILE_OPEN_PATH, async (_, path: string): Promise<OpenFileResult | null> => {
-    try {
-      const raw = await readFile(path, 'utf8')
-      const content = raw.startsWith('﻿') ? raw.slice(1) : raw
-      return { path, content }
-    } catch {
-      return null
+  ipcMain.handle(IPC.FILE_OPEN_PATH, (_, path: string): Promise<OpenFileResult | null> => openPath(path))
+
+  ipcMain.handle(
+    IPC.FILE_SAVE,
+    async (_, path: string, content: string, meta: FileMeta, force?: boolean): Promise<SaveResult> => {
+      try {
+        if (meta.readOnly) return { ok: false, reason: 'error' }
+        // Never overwrite a file another program changed since we read it (a log still being
+        // written, a config edited elsewhere) unless the user explicitly chose to.
+        if (!force && meta.mtimeMs !== null) {
+          const onDisk = await stat(path).then((s) => s.mtimeMs, () => null)
+          if (onDisk !== null && onDisk > meta.mtimeMs + 1) return { ok: false, reason: 'conflict' }
+        }
+        await writeFile(path, encodeText(content, meta))
+        return { ok: true, mtimeMs: (await stat(path)).mtimeMs }
+      } catch {
+        return { ok: false, reason: 'error' }
+      }
     }
-  })
+  )
 
-  ipcMain.handle(IPC.FILE_SAVE, async (_, path: string, content: string): Promise<boolean> => {
-    try {
-      await writeFile(path, content, 'utf8')
-      return true
-    } catch {
-      return false
+  ipcMain.handle(IPC.FILE_STAT, (_, path: string): Promise<number | null> =>
+    stat(path).then((s) => s.mtimeMs, () => null)
+  )
+
+  ipcMain.handle(
+    IPC.FILE_CONFIRM_CONFLICT,
+    async (_, name: string): Promise<'overwrite' | 'reload' | 'cancel'> => {
+      const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
+      const options = {
+        type: 'warning' as const,
+        buttons: ['Overwrite', 'Reload from Disk', 'Cancel'],
+        defaultId: 2,
+        cancelId: 2,
+        message: `${name} has changed on disk`,
+        detail:
+          'Another program changed this file after Lumina opened it. Overwrite replaces the ' +
+          'file with your version. Reload discards your unsaved edits.'
+      }
+      const { response } = win ? await dialog.showMessageBox(win, options) : await dialog.showMessageBox(options)
+      return response === 0 ? 'overwrite' : response === 1 ? 'reload' : 'cancel'
     }
-  })
+  )
 
-  ipcMain.handle(IPC.FILE_SAVE_AS, async (_, content: string, currentPath?: string) => {
+  ipcMain.handle(IPC.FILE_SAVE_AS, async (_, content: string, currentPath: string | undefined, meta: FileMeta): Promise<SaveAsResult | null> => {
     const win = BrowserWindow.getFocusedWindow()
     // Strip extension from the current filename (if any) so macOS auto-appends
     // the correct extension when the user picks a Format — no double-extension confusion.
@@ -77,14 +136,11 @@ export function registerFileHandlers(): void {
       : 'untitled'
     const result = await dialog.showSaveDialog(win!, {
       defaultPath: join(luminaDir(), baseName),
-      filters: [
-        { name: 'Markdown', extensions: ['md'] },
-        { name: 'Plain Text', extensions: ['txt'] },
-      ],
+      filters: saveFilters(currentPath),
     })
     if (result.canceled || !result.filePath) return null
-    await writeFile(result.filePath, content, 'utf8')
-    return { path: result.filePath }
+    await writeFile(result.filePath, encodeText(content, meta))
+    return { path: result.filePath, mtimeMs: (await stat(result.filePath)).mtimeMs }
   })
 
   ipcMain.handle(IPC.FILE_READ_INITIAL, async (): Promise<OpenFileResult | null> => {
@@ -92,30 +148,27 @@ export function registerFileHandlers(): void {
     //    (macOS open-file events that arrived before the window was ready land here too)
     const fileArg = takePendingOpenPath()
     if (fileArg) {
-      try {
-        const raw = await readFile(fileArg, 'utf8')
-        const content = raw.startsWith('﻿') ? raw.slice(1) : raw
+      const opened = await openPath(fileArg)
+      if (opened) {
         const existing = store.get('recentFiles').filter((f) => f.path !== fileArg)
         store.set('recentFiles', [
           { path: fileArg, name: basename(fileArg), lastOpened: new Date().toISOString() },
           ...existing
         ].slice(0, 20))
-        return { path: fileArg, content }
-      } catch {
-        return null
       }
+      return opened
     }
 
     // 2. Reopen the most recent file that still exists on disk
     const recents = store.get('recentFiles')
     for (const recent of recents) {
-      try {
-        const raw = await readFile(recent.path, 'utf8')
-        const content = raw.startsWith('﻿') ? raw.slice(1) : raw
-        const rest = recents.filter((f) => f.path !== recent.path)
-        store.set('recentFiles', [{ ...recent, lastOpened: new Date().toISOString() }, ...rest])
-        return { path: recent.path, content }
-      } catch { /* file missing, try next */ }
+      const exists = await access(recent.path).then(() => true, () => false)
+      if (!exists) continue // file missing, try next
+      const opened = await openPath(recent.path)
+      if (!opened) continue
+      const rest = recents.filter((f) => f.path !== recent.path)
+      store.set('recentFiles', [{ ...recent, lastOpened: new Date().toISOString() }, ...rest])
+      return opened
     }
 
     // 3. First-ever launch → create Lumina folder + welcome doc
@@ -129,7 +182,7 @@ export function registerFileHandlers(): void {
         store.set('recentFiles', [
           { path: welcomePath, name: 'Welcome to Lumina.md', lastOpened: new Date().toISOString() }
         ])
-        return { path: welcomePath, content: WELCOME_CONTENT }
+        return openPath(welcomePath)
       } catch {
         store.set('settings', { ...settings, welcomeShown: true })
       }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { detectFileType } from '../txtUtils'
+import { detectFileType, viewKindFor } from '../txtUtils'
 
 describe('detectFileType', () => {
   it('null → "md"', () => {
@@ -26,8 +26,29 @@ describe('detectFileType', () => {
     expect(detectFileType('readme.Txt')).toBe('txt')
   })
 
-  it('no extension → "md"', () => {
-    expect(detectFileType('README')).toBe('md')
+  it('maps data and other text files', () => {
+    expect(detectFileType('/a/data.JSON')).toBe('json')
+    expect(detectFileType('/a/feed.xml')).toBe('xml')
+    expect(detectFileType('/a/icon.svg')).toBe('xml')
+    expect(detectFileType('/a/export.csv')).toBe('csv')
+    expect(detectFileType('/a/export.tsv')).toBe('csv')
+    expect(detectFileType('/a/server.log')).toBe('text')
+    expect(detectFileType('/a/config.yaml')).toBe('text')
+    expect(detectFileType('/a.b/Makefile')).toBe('text')
+    expect(detectFileType('/a/.gitignore')).toBe('text')
+  })
+
+  it('picks the right view', () => {
+    expect(viewKindFor('md')).toBe('rich')
+    expect(viewKindFor('txt')).toBe('rich')
+    expect(viewKindFor('json')).toBe('code')
+    expect(viewKindFor('text')).toBe('code')
+    expect(viewKindFor('csv')).toBe('table')
+    expect(viewKindFor('csv', true)).toBe('code')
+  })
+
+  it('no extension → "text"', () => {
+    expect(detectFileType('README')).toBe('text')
   })
 
   it('/path/to/file.txt → "txt"', () => {

@@ -1,12 +1,28 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useAppStore } from '../store/appStore'
 import type { Editor } from '@tiptap/react'
-import type { FileType } from '../types/file'
-import { buildTxtDoc, serializeTxtDoc, detectFileType, extractSnippet } from '../utils/txtUtils'
+import { DEFAULT_META } from '../types/file'
+import type { FileMeta, FileType, OpenFileResult, ViewKind } from '../types/file'
+import { buildTxtDoc, serializeTxtDoc, detectFileType, extractSnippet, viewKindFor } from '../utils/txtUtils'
 import { resolveRelativeImagePaths, unresolveRelativeImagePaths, normalizeAlignAttributes } from '../utils/markdownUtils'
+import { getSurface, registerSurface } from '../surfaces'
 
 // Re-export detectFileType for backward compatibility (other files import it from here)
 export { detectFileType } from '../utils/txtUtils'
+
+const fileName = (path: string): string => path.split(/[/\\]/).pop() ?? path
+
+function currentView(): ViewKind {
+  const { fileType, viewAsText } = useAppStore.getState().file
+  return viewKindFor(fileType, viewAsText)
+}
+
+/** Switch a CSV between the table and the raw text, carrying unsaved edits across. */
+export function toggleCsvTextView(): void {
+  const { file, setFile } = useAppStore.getState()
+  const content = getSurface(currentView())?.getContent() ?? file.content
+  setFile({ content, viewAsText: !file.viewAsText, loadId: file.loadId + 1 })
+}
 
 // ── Hook ─────────────────────────────────────────────────────────────────
 
@@ -24,6 +40,8 @@ export function useFile(editor: Editor | null): {
   const saveDraft = useAppStore((s) => s.saveDraft)
   const clearDraft = useAppStore((s) => s.clearDraft)
   const showToast = useAppStore((s) => s.showToast)
+  const setSaveBlocked = useAppStore((s) => s.setSaveBlocked)
+  const setViewStatus = useAppStore((s) => s.setViewStatus)
 
   /** Add to recents without reordering existing entries mid-session. */
   const stableAddRecent = useCallback(
@@ -31,73 +49,156 @@ export function useFile(editor: Editor | null): {
       await window.api.addRecentFile(path, snippet)
       const current = useAppStore.getState().recentFiles
       if (!current.some((f) => f.path === path)) {
-        const name = path.split(/[/\\]/).pop() ?? path
-        setRecentFiles([{ path, name, lastOpened: new Date().toISOString(), snippet }, ...current].slice(0, 20))
+        setRecentFiles([{ path, name: fileName(path), lastOpened: new Date().toISOString(), snippet }, ...current].slice(0, 20))
       }
     },
     [setRecentFiles]
   )
 
-  /** Load content into TipTap, routing by file type. */
+  /**
+   * Put content into the editor for this file type. The code and table views load themselves
+   * from the store (see `loadId`), so only the rich TipTap view is driven from here.
+   */
   const loadContent = useCallback(
     (raw: string, fileType: FileType, filePath?: string | null) => {
       if (!editor) return
-      try {
-        if (fileType === 'txt') {
-          editor.commands.setContent(buildTxtDoc(raw))
-        } else {
-          // 1. Normalise deprecated align="center" → style="text-align:center"
-          //    so TipTap's TextAlign extension centres the content correctly.
-          // 2. Resolve relative image paths to media:// URLs so local images render.
-          //    The reverse (unresolve) happens in getContent() before saving.
-          const aligned = normalizeAlignAttributes(raw)
-          const content = filePath ? resolveRelativeImagePaths(aligned, filePath) : aligned
-          editor.commands.setContent(content)
+      if (viewKindFor(fileType) === 'rich') {
+        try {
+          if (fileType === 'txt') {
+            editor.commands.setContent(buildTxtDoc(raw))
+          } else {
+            // 1. Normalise deprecated align="center" → style="text-align:center"
+            //    so TipTap's TextAlign extension centres the content correctly.
+            // 2. Resolve relative image paths to media:// URLs so local images render.
+            //    The reverse (unresolve) happens in getContent() before saving.
+            const aligned = normalizeAlignAttributes(raw)
+            const content = filePath ? resolveRelativeImagePaths(aligned, filePath) : aligned
+            editor.commands.setContent(content)
+          }
+        } catch (err) {
+          // Fallback: if the parsed doc is rejected by the ProseMirror schema,
+          // load as plain text paragraphs so the user isn't left with a blank editor.
+          console.error('[Lumina] setContent failed, falling back to plain text:', err)
+          const fallback = { type: 'doc', content: raw.split(/\r?\n/).map((line) =>
+            line ? { type: 'paragraph', content: [{ type: 'text', text: line }] } : { type: 'paragraph' }
+          )}
+          editor.commands.setContent(fallback)
         }
-      } catch (err) {
-        // Fallback: if the parsed doc is rejected by the ProseMirror schema,
-        // load as plain text paragraphs so the user isn't left with a blank editor.
-        console.error('[Lumina] setContent failed, falling back to plain text:', err)
-        const fallback = { type: 'doc', content: raw.split(/\r?\n/).map((line) =>
-          line ? { type: 'paragraph', content: [{ type: 'text', text: line }] } : { type: 'paragraph' }
-        )}
-        editor.commands.setContent(fallback)
       }
       markDirty(false)
     },
     [editor, markDirty]
   )
 
-  /** Serialize editor content to the correct format for saving. */
-  const getContent = useCallback((): string => {
-    if (!editor) return ''
-    const { fileType, path } = useAppStore.getState().file
-    if (fileType === 'txt') return serializeTxtDoc(editor.state.doc)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const raw = (editor.storage as any).markdown?.getMarkdown() ?? editor.getText()
-    // Strip file:// absolute prefixes we added on load — restore original relative paths
-    return path ? unresolveRelativeImagePaths(raw, path) : raw
+  // The rich (TipTap) view as a document surface
+  useEffect(() => {
+    if (!editor) return
+    return registerSurface('rich', {
+      getContent: () => {
+        const { fileType, path } = useAppStore.getState().file
+        if (fileType === 'txt') return serializeTxtDoc(editor.state.doc)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const raw = (editor.storage as any).markdown?.getMarkdown() ?? editor.getText()
+        // Strip the media:// prefixes we added on load — restore original relative paths
+        return path ? unresolveRelativeImagePaths(raw, path) : raw
+      },
+      snapshot: () => editor.state.doc,
+      isUnchangedSince: (doc) => editor.state.doc.eq(doc as typeof editor.state.doc),
+      focus: () => editor.commands.focus(),
+    })
   }, [editor])
+
+  /** Show a freshly read file. Leaves the document clean. */
+  const applyOpened = useCallback(
+    (result: OpenFileResult) => {
+      const fileType = detectFileType(result.path)
+      const meta: FileMeta = {
+        encoding: result.encoding,
+        hasBom: result.hasBom,
+        eol: result.eol,
+        mtimeMs: result.mtimeMs,
+        readOnly: result.readOnly,
+      }
+      setFile({
+        path: result.path,
+        content: result.content,
+        isDirty: false,
+        fileType,
+        meta,
+        kind: result.kind,
+        size: result.size,
+        viewAsText: false,
+        loadId: useAppStore.getState().file.loadId + 1,
+      })
+      setSaveBlocked(false)
+      setViewStatus({})
+      editor?.setEditable(!result.readOnly)
+      loadContent(result.content, fileType, result.path)
+      document.title = `${fileName(result.path)} — Lumina`
+    },
+    [editor, setFile, setSaveBlocked, setViewStatus, loadContent]
+  )
+
+  const reloadFromDisk = useCallback(
+    async (path: string) => {
+      const result = await window.api.openFilePath(path)
+      if (result && useAppStore.getState().file.path === path) applyOpened(result)
+    },
+    [applyOpened]
+  )
 
   /**
    * Write the current document to disk and report whether it is now safely saved.
-   * The document is only marked clean if nothing was typed while the write was in flight —
-   * otherwise those keystrokes would be flagged as saved and never auto-saved.
+   *  - Refuses to overwrite a file another program changed; the user decides what happens.
+   *  - Only marks the document clean if nothing was typed while the write was in flight —
+   *    otherwise those keystrokes would be flagged as saved and never auto-saved.
    */
+  const saveInFlight = useRef<Promise<boolean> | null>(null)
   const writeCurrentFile = useCallback(async (): Promise<boolean> => {
-    const { path } = useAppStore.getState().file
-    if (!path || !editor) return false
-    const docAtSave = editor.state.doc
-    const ok = await window.api.saveFile(path, getContent())
-    if (!ok) {
-      showToast(`Couldn't save ${path.split(/[/\\]/).pop()}`, 'error')
-      return false
+    // One save at a time: a second caller (auto-save firing while a conflict prompt is up)
+    // waits for the first, then re-checks whether there is still anything to do.
+    if (saveInFlight.current) {
+      await saveInFlight.current
+      if (!useAppStore.getState().file.isDirty) return true
     }
-    if (useAppStore.getState().file.path === path && editor.state.doc.eq(docAtSave)) {
-      markDirty(false)
+    const run = async (): Promise<boolean> => {
+      const { path, meta, kind, content: loaded } = useAppStore.getState().file
+      if (!path) return false
+      if (kind === 'binary' || meta.readOnly) return true
+      const surface = getSurface(currentView())
+      // getContent first: format-on-save may tidy the document, and the snapshot must be
+      // of the document as written.
+      const content = surface ? surface.getContent() : loaded
+      const snapshot = surface?.snapshot()
+
+      let result = await window.api.saveFile(path, content, meta)
+      if (!result.ok && result.reason === 'conflict') {
+        const choice = await window.api.confirmConflict(fileName(path))
+        if (choice === 'reload') {
+          await reloadFromDisk(path)
+          return true
+        }
+        if (choice === 'cancel') {
+          setSaveBlocked(true)
+          return false
+        }
+        result = await window.api.saveFile(path, content, meta, true)
+      }
+      if (!result.ok) {
+        showToast(`Couldn't save ${fileName(path)}`, 'error')
+        return false
+      }
+      const now = useAppStore.getState().file
+      if (now.path === path) {
+        setFile({ meta: { ...now.meta, mtimeMs: result.mtimeMs } })
+        setSaveBlocked(false)
+        if (!surface || surface.isUnchangedSince(snapshot)) markDirty(false)
+      }
+      return true
     }
-    return true
-  }, [editor, getContent, markDirty, showToast])
+    saveInFlight.current = run().finally(() => { saveInFlight.current = null })
+    return saveInFlight.current
+  }, [markDirty, setFile, setSaveBlocked, showToast, reloadFromDisk])
 
   /**
    * Auto-save runs 2 s after the last keystroke, so switching documents inside that window
@@ -117,7 +218,7 @@ export function useFile(editor: Editor | null): {
   const snapshotDraftIfNeeded = useCallback(() => {
     const state = useAppStore.getState()
     if (!state.file.path && state.file.isDirty && editor) {
-      const raw = (editor.storage as Record<string, { getMarkdown?: () => string }>)
+      const raw = (editor.storage as unknown as Record<string, { getMarkdown?: () => string }>)
         .markdown?.getMarkdown?.() ?? editor.getText()
       if (raw.trim()) saveDraft(raw)
     }
@@ -130,67 +231,99 @@ export function useFile(editor: Editor | null): {
       snapshotDraftIfNeeded()
       const result = await window.api.openFilePath(path)
       if (!result) {
-        showToast(`Couldn't open ${path.split(/[/\\]/).pop()}`, 'error')
+        showToast(`Couldn't open ${fileName(path)}`, 'error')
         return
       }
-      const fileType = detectFileType(result.path)
-      setFile({ path: result.path, content: result.content, isDirty: false, fileType })
-      loadContent(result.content, fileType, result.path)
-      await stableAddRecent(result.path, extractSnippet(result.content, fileType))
-      document.title = `${result.path.split(/[/\\]/).pop()} — Lumina`
+      applyOpened(result)
+      await stableAddRecent(result.path, extractSnippet(result.content, detectFileType(result.path)))
     },
-    [setFile, loadContent, stableAddRecent, snapshotDraftIfNeeded, flushPendingSave, showToast]
+    [applyOpened, stableAddRecent, snapshotDraftIfNeeded, flushPendingSave, showToast]
+  )
+
+  /** Reset to a blank, untitled Markdown document holding `content`. */
+  const showUntitled = useCallback(
+    (content: string) => {
+      setFile({
+        path: null,
+        content,
+        isDirty: false,
+        fileType: 'md',
+        meta: DEFAULT_META,
+        kind: 'text',
+        size: 0,
+        viewAsText: false,
+        loadId: useAppStore.getState().file.loadId + 1,
+      })
+      setSaveBlocked(false)
+      setViewStatus({})
+      editor?.setEditable(true)
+      // loadContent leaves the document clean (setContent alone would flag it dirty)
+      loadContent(content, 'md', null)
+    },
+    [editor, setFile, setSaveBlocked, setViewStatus, loadContent]
   )
 
   const newFile = useCallback(async () => {
     if (!(await flushPendingSave())) return
     snapshotDraftIfNeeded()
-    setFile({ path: null, content: '', isDirty: false, fileType: 'md' })
-    editor?.commands.setContent('')
-    // setContent emits an update, which flags the document dirty — a blank file isn't
-    markDirty(false)
+    showUntitled('')
     document.title = 'Untitled — Lumina'
-  }, [editor, setFile, markDirty, snapshotDraftIfNeeded, flushPendingSave])
+  }, [showUntitled, snapshotDraftIfNeeded, flushPendingSave])
 
   /** Restore the in-memory draft into the editor. */
   const openDraft = useCallback(async () => {
     const { draft } = useAppStore.getState()
     if (!draft || !editor) return
     if (!(await flushPendingSave())) return
-    setFile({ path: null, content: draft.content, isDirty: true, fileType: 'md' })
-    loadContent(draft.content, 'md', null)
-    // loadContent leaves the document clean, but a draft is by definition unsaved
+    showUntitled(draft.content)
+    // A draft is by definition unsaved
     markDirty(true)
     document.title = 'Unsaved draft — Lumina'
-  }, [editor, setFile, loadContent, markDirty, flushPendingSave])
+  }, [editor, showUntitled, markDirty, flushPendingSave])
 
   const openFile = useCallback(async () => {
     const result = await window.api.openFile()
     if (!result) return
+    if (result.path === useAppStore.getState().file.path) return
     if (!(await flushPendingSave())) return
     snapshotDraftIfNeeded()
-    const fileType = detectFileType(result.path)
-    setFile({ path: result.path, content: result.content, isDirty: false, fileType })
-    loadContent(result.content, fileType, result.path)
-    await stableAddRecent(result.path, extractSnippet(result.content, fileType))
-    document.title = `${result.path.split(/[/\\]/).pop()} — Lumina`
-  }, [setFile, loadContent, stableAddRecent, snapshotDraftIfNeeded, flushPendingSave])
+    applyOpened(result)
+    await stableAddRecent(result.path, extractSnippet(result.content, detectFileType(result.path)))
+  }, [applyOpened, stableAddRecent, snapshotDraftIfNeeded, flushPendingSave])
 
   const saveFileAs = useCallback(async () => {
-    const content = getContent()
-    const result = await window.api.saveFileAs(content, useAppStore.getState().file.path ?? undefined)
+    const before = useAppStore.getState().file
+    if (before.kind === 'binary') return
+    const viewBefore = currentView()
+    const content = getSurface(viewBefore)?.getContent() ?? before.content
+    // A read-only file is read-only because of its encoding; a copy is written as UTF-8
+    const meta = before.meta.readOnly ? DEFAULT_META : before.meta
+    const result = await window.api.saveFileAs(content, before.path ?? undefined, meta)
     if (!result) return
     const fileType = detectFileType(result.path)
-    setFile({ path: result.path, isDirty: false, fileType })
+    setFile({
+      path: result.path,
+      isDirty: false,
+      fileType,
+      viewAsText: false,
+      meta: { ...meta, mtimeMs: result.mtimeMs, readOnly: false },
+    })
+    setSaveBlocked(false)
+    editor?.setEditable(true)
+    if (viewKindFor(fileType) !== viewBefore || fileType !== before.fileType) {
+      // Saved under a different type (notes.md → notes.json): show it in that type's view
+      setFile({ content, loadId: useAppStore.getState().file.loadId + 1 })
+      loadContent(content, fileType, result.path)
+    }
     markDirty(false)
     clearDraft()  // draft is now a real saved file
-    ;(window as Window & { __lumina_isDirty__?: boolean }).__lumina_isDirty__ = false
     await stableAddRecent(result.path, extractSnippet(content, fileType))
-    document.title = `${result.path.split(/[/\\]/).pop()} — Lumina`
-  }, [getContent, setFile, markDirty, clearDraft, stableAddRecent])
+    document.title = `${fileName(result.path)} — Lumina`
+  }, [editor, setFile, setSaveBlocked, markDirty, clearDraft, stableAddRecent, loadContent])
 
   const saveFile = useCallback(async () => {
-    if (!useAppStore.getState().file.path) { await saveFileAs(); return }
+    const { path, meta } = useAppStore.getState().file
+    if (!path || meta.readOnly) { await saveFileAs(); return }
     await writeCurrentFile()
   }, [saveFileAs, writeCurrentFile])
 
@@ -213,29 +346,28 @@ export function useFile(editor: Editor | null): {
 
   // Load initial file (CLI / most recent / welcome)
   useEffect(() => {
+    if (!editor) return
     window.api.readInitialFile().then(async (result) => {
       if (!result) return
-      const fileType = detectFileType(result.path)
-      setFile({ path: result.path, content: result.content, isDirty: false, fileType })
-      loadContent(result.content, fileType, result.path)
-      document.title = `${result.path.split(/[/\\]/).pop()} — Lumina`
-      await window.api.addRecentFile(result.path, extractSnippet(result.content, fileType))
+      applyOpened(result)
+      await window.api.addRecentFile(result.path, extractSnippet(result.content, detectFileType(result.path)))
       const recents = await window.api.getRecentFiles()
       setRecentFiles(recents)
     })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [!!editor]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-save: 2 seconds after the last edit, if the file already has a path
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null
+    const wanted = (s: ReturnType<typeof useAppStore.getState>): boolean =>
+      s.file.isDirty && !!s.file.path && !s.file.meta.readOnly && !s.saveBlocked
 
     const unsub = useAppStore.subscribe((state) => {
-      if (state.file.isDirty && state.file.path) {
+      if (wanted(state)) {
         if (timer) clearTimeout(timer)
         timer = setTimeout(() => {
           // Re-read state at fire time — path may have changed
-          const s = useAppStore.getState()
-          if (s.file.isDirty && s.file.path) saveFile()
+          if (wanted(useAppStore.getState())) writeCurrentFile()
         }, 2000)
       } else if (timer) {
         clearTimeout(timer)
@@ -247,7 +379,45 @@ export function useFile(editor: Editor | null): {
       unsub()
       if (timer) clearTimeout(timer)
     }
-  }, [saveFile])
+  }, [writeCurrentFile])
+
+  // Pick up changes another program made to the open file. Checked when the window regains
+  // focus, and only when there are no unsaved edits to lose (a dirty document is handled by
+  // the conflict prompt on save instead).
+  useEffect(() => {
+    const onFocus = async (): Promise<void> => {
+      const { path, isDirty, meta } = useAppStore.getState().file
+      if (!path || isDirty || meta.mtimeMs === null) return
+      const onDisk = await window.api.statFile(path)
+      const now = useAppStore.getState().file
+      if (onDisk !== null && now.path === path && !now.isDirty && onDisk > meta.mtimeMs + 1) {
+        await reloadFromDisk(path)
+      }
+    }
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [reloadFromDisk])
+
+  // Dropping a file anywhere on the window opens it. Images dropped on a Markdown document
+  // are handled (and stopped) by the editor itself, so they never reach this listener.
+  useEffect(() => {
+    const hasFiles = (e: DragEvent): boolean => !!e.dataTransfer?.types.includes('Files')
+    const onDragOver = (e: DragEvent): void => { if (hasFiles(e)) e.preventDefault() }
+    const onDrop = (e: DragEvent): void => {
+      if (!hasFiles(e)) return
+      e.preventDefault()
+      const file = Array.from(e.dataTransfer?.files ?? []).find((f) => !f.type.startsWith('image/'))
+      if (!file) return
+      const path = window.api.getPathForFile(file)
+      if (path) openFilePath(path)
+    }
+    window.addEventListener('dragover', onDragOver)
+    window.addEventListener('drop', onDrop)
+    return () => {
+      window.removeEventListener('dragover', onDragOver)
+      window.removeEventListener('drop', onDrop)
+    }
+  }, [openFilePath])
 
   // Sync dirty flag to window global for close guard
   useEffect(() => {

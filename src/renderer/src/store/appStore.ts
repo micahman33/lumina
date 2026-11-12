@@ -1,5 +1,28 @@
 import { create } from 'zustand'
+import { DEFAULT_META } from '../types/file'
 import type { AppSettings, FileState, RecentFile } from '../types/file'
+
+/** What the code and table views report to the status bar. */
+export interface ViewStatus {
+  line?: number
+  col?: number
+  errors?: number
+  rows?: number
+  cols?: number
+  note?: string
+}
+
+export const EMPTY_FILE: FileState = {
+  path: null,
+  content: '',
+  isDirty: false,
+  fileType: 'md',
+  meta: DEFAULT_META,
+  kind: 'text',
+  size: 0,
+  viewAsText: false,
+  loadId: 0,
+}
 
 /** In-memory scratchpad: content of the current unsaved new file */
 export interface DraftState {
@@ -21,7 +44,12 @@ interface AppState {
   outlineOpen: boolean
   focusMode: boolean
   toast: { message: string; type: 'success' | 'error' } | null
+  viewStatus: ViewStatus
+  /** A save conflict was cancelled: auto-save stays off until the user saves by hand. */
+  saveBlocked: boolean
 
+  setViewStatus: (status: ViewStatus) => void
+  setSaveBlocked: (blocked: boolean) => void
   setFile: (file: Partial<FileState>) => void
   markDirty: (dirty: boolean) => void
   saveDraft: (content: string) => void
@@ -42,7 +70,9 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set) => ({
-  file: { path: null, content: '', isDirty: false, fileType: 'md' },
+  file: EMPTY_FILE,
+  viewStatus: {},
+  saveBlocked: false,
   draft: null,
   theme: 'system',
   sidebarOpen: true,
@@ -59,6 +89,8 @@ export const useAppStore = create<AppState>((set) => ({
   setFile: (partial) =>
     set((state) => ({ file: { ...state.file, ...partial } })),
 
+  // Always produces a new state, even when the flag is unchanged: the auto-save timer
+  // restarts on every store update, which is what makes it wait for a pause in typing.
   markDirty: (dirty) =>
     set((state) => ({ file: { ...state.file, isDirty: dirty } })),
 
@@ -68,6 +100,9 @@ export const useAppStore = create<AppState>((set) => ({
     })),
 
   clearDraft: () => set({ draft: null }),
+
+  setViewStatus: (viewStatus) => set({ viewStatus }),
+  setSaveBlocked: (saveBlocked) => set({ saveBlocked }),
 
   setTheme: (theme) => set({ theme }),
 

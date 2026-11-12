@@ -4,6 +4,33 @@ All notable changes to Lumina are documented here.
 
 ---
 
+## v1.7.0
+
+**More file types.** Lumina now opens far more than Markdown:
+
+- **JSON and XML** open pretty-printed in a code editor with syntax colours, line numbers, folding and find & replace. Errors — a stray comma, an unclosed or mismatched tag — are underlined where they occur, with a count in the status bar. Saving always writes the pretty-printed form; formatting only ever changes whitespace, never a value
+- **CSV and TSV** open as an editable table: change cells, add and remove rows and columns, sort by a column, undo and redo, find. Rows you don't touch are written back exactly as they were, and a **View as text** toggle shows the raw file
+- **Logs and any other text file** (`.log`, `.yaml`, `.ini`, source code, files with no extension) open in the code editor, with syntax colours where the type is recognised
+- Files that aren't text show a clear "can't display this file" message instead of garbage
+- Drop any file onto the window to open it
+
+**Safer saving, for every file type including Markdown:**
+
+- Lumina no longer overwrites a file that another program changed while it was open. It reloads the file if you have no unsaved edits, and asks what to do if you have
+- The file's encoding, byte-order mark and Windows/Unix line endings are kept on save. UTF-16 files are supported; other non-UTF-8 files open read-only instead of being silently corrupted
+- Switching documents within two seconds of typing no longer loses the last edits
+- Choosing **Save** when closing now waits for the save to finish, and keeps the window open if you cancel Save As
+- Renaming a file in the sidebar can no longer overwrite another file
+
+**Fixes:**
+
+- Spell-check **Ignore** now lasts for the session only, as intended (it was permanent)
+- A new blank document is no longer treated as unsaved; a restored draft is
+- Windows: opening a document while Lumina is running uses the existing window instead of starting a second copy
+- macOS: "Open With" at launch could be overridden by the last-opened file
+- Command Palette: **New**, **Save As** and recent files now work
+- A failed save or open now shows a message instead of failing silently
+
 ## v1.6.11
 
 - **Spell-check suggestions now actually work** — right-clicking a misspelled word shows the OS dictionary's suggestions (click to replace), plus **Add to Dictionary** and **Ignore**. The v1.6.8 fix didn't take: the editor cancelled the right-click event, which stopped Chromium from ever reporting the misspelling to the app

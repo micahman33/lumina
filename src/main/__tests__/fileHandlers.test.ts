@@ -183,9 +183,11 @@ describe('fileHandlers: recent files management logic', () => {
 describe('pendingOpen: findFileArg', () => {
   it('finds a document path among Chromium flags', async () => {
     const { findFileArg } = await import('../pendingOpen')
-    expect(findFileArg(['--allow-file-access', 'C:\\docs\\notes.md'])).toBe('C:\\docs\\notes.md')
-    expect(findFileArg(['--flag=x.md'])).toBeNull()
-    expect(findFileArg(['.'])).toBeNull()
+    const real = `${process.cwd()}/package.json`
+    expect(findFileArg(['--allow-file-access', real])).toBe(real)
+    expect(findFileArg(['--flag=package.json'])).toBeNull()
+    expect(findFileArg(['.'])).toBeNull() // a folder, e.g. `electron .`
+    expect(findFileArg(['/no/such/file.md'])).toBeNull()
   })
 
   it('hands a pending path out exactly once', async () => {

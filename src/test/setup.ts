@@ -6,7 +6,9 @@ Object.defineProperty(window, 'api', {
   value: {
     openFile: vi.fn(),
     openFilePath: vi.fn(),
-    saveFile: vi.fn().mockResolvedValue(true),
+    saveFile: vi.fn().mockResolvedValue({ ok: true, mtimeMs: 1 }),
+    statFile: vi.fn().mockResolvedValue(null),
+    confirmConflict: vi.fn().mockResolvedValue('cancel'),
     saveFileAs: vi.fn(),
     readInitialFile: vi.fn().mockResolvedValue(null),
     copyImageToDoc: vi.fn(),

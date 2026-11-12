@@ -5,18 +5,23 @@ import { SettingsModal } from '../settings/SettingsModal'
 import { Toast } from '../ui/Toast'
 import { useAppStore } from '../../store/appStore'
 import type { Editor } from '@tiptap/react'
+import { viewKindFor } from '../../utils/txtUtils'
 
 interface AppShellProps {
   editor: Editor
   onOpenFile: () => void
   onSaveFile: () => void
+  onSaveFileAs: () => void
   onOpenFilePath: (path: string) => void
   onNewFile: () => void
   onOpenDraft: () => void
 }
 
-export function AppShell({ editor, onOpenFile, onSaveFile, onOpenFilePath, onNewFile, onOpenDraft }: AppShellProps): JSX.Element {
-  const focusMode = useAppStore((s) => s.focusMode)
+export function AppShell({ editor, onOpenFile, onSaveFile, onSaveFileAs, onOpenFilePath, onNewFile, onOpenDraft }: AppShellProps): JSX.Element {
+  // Focus Mode only applies to Markdown/plain-text writing
+  const focusMode = useAppStore(
+    (s) => s.focusMode && s.file.kind !== 'binary' && viewKindFor(s.file.fileType, s.file.viewAsText) === 'rich'
+  )
 
   return (
     <div className="flex flex-col h-screen lm-ink" style={{ background: 'var(--lm-bg)' }}>
@@ -50,7 +55,14 @@ export function AppShell({ editor, onOpenFile, onSaveFile, onOpenFilePath, onNew
         >
           <Sidebar onOpenFile={onOpenFilePath} onNewFile={onNewFile} onOpenDraft={onOpenDraft} />
         </div>
-        <EditorPane editor={editor} onOpenFile={onOpenFile} onSaveFile={onSaveFile} />
+        <EditorPane
+          editor={editor}
+          onOpenFile={onOpenFile}
+          onSaveFile={onSaveFile}
+          onSaveFileAs={onSaveFileAs}
+          onNewFile={onNewFile}
+          onOpenFilePath={onOpenFilePath}
+        />
       </div>
       <SettingsModal />
       <Toast />

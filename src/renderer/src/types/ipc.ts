@@ -4,6 +4,8 @@ export const IPC = {
   FILE_SAVE: 'file:save',
   FILE_SAVE_AS: 'file:save-as',
   FILE_READ_INITIAL: 'file:read-initial',
+  FILE_STAT: 'file:stat',
+  FILE_CONFIRM_CONFLICT: 'file:confirm-conflict',
   IMAGE_COPY_TO_DOC: 'image:copy-to-doc',
   RECENT_GET: 'recent:get',
   RECENT_ADD: 'recent:add',
