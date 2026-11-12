@@ -45,13 +45,17 @@ writing this up and is open to change.
   arrow keys move when not editing, Escape cancels an edit.
 - Right-click a row or column to insert before/after or delete. An "add row" control sits
   under the last row.
-- Clicking a column title sorts by it (ascending, then descending). Sorting really reorders
-  the rows, so it is saved. Numbers sort numerically when every non-empty cell in the column
+- Each column title has a small sort arrow; clicking the arrow sorts by that column
+  (ascending, then descending). Clicking the title text itself edits it, like any cell.
+  **(decided)** Sorting really reorders the rows, so it is saved, and undo reverses it. Numbers sort numerically when every non-empty cell in the column
   is a number; otherwise text order.
 - Undo and redo cover cell edits, structural changes and sorts.
 - Saving keeps the file's separator (comma, semicolon or tab), line endings and
   byte-order mark. Cell text is never re-interpreted: `007`, `1e5` and dates stay exactly
   as typed.
+- Rows the user did not change are written back character for character, including their
+  original quoting and spacing. Only rows that were edited, or every row when a column is
+  added or removed, are re-written, with quotes added only where needed.
 - A "View as text" toggle switches the same file to the code editor and back.
 - Not a spreadsheet: no formulas, no cell formatting, no column types.
 
@@ -62,14 +66,27 @@ writing this up and is open to change.
   the extension is one CodeMirror knows. No formatting and no error checking.
 - A file that is not text (image, archive, executable) shows a "Lumina can't display this
   file" panel with a "Reveal in Finder/Explorer" button. Nothing is loaded into an editor.
-- A text file that is not valid UTF-8 opens read-only with a notice, because saving it back
-  as UTF-8 would corrupt it.
+- UTF-16 files that start with a byte-order mark (common from Windows tools) open and save
+  normally in their own encoding.
+- Any other text file that is not valid UTF-8 (typically Windows-1252, such as Excel's
+  default CSV export with accented characters) is displayed using Windows-1252 and opens
+  read-only with a notice, because Lumina cannot be sure how to write it back.
+- These guards apply to Markdown and `.txt` as well. Today a non-UTF-8 Markdown file is
+  silently corrupted on save.
 
 ### Shared behaviour
 
 - Auto-save, the unsaved-changes prompt, the recent-files sidebar (including search
-  snippets), drag-a-file-onto-the-window and Open With work for every type exactly as they
-  do for Markdown.
+  snippets) and Open With work for every type exactly as they do for Markdown.
+- Dropping a file onto the window opens it. The README already promises this, but it was
+  never built: today only images dropped on the editor do anything. A dropped image is
+  inserted when a Markdown document is open (as now) and ignored otherwise; any other
+  dropped file is opened through the same path as File → Open.
+- If a file has changed on disk since Lumina loaded or last saved it (a log still being
+  written, a config edited elsewhere), Lumina does not overwrite it. With no unsaved edits
+  it reloads the file quietly the next time the window gains focus. With unsaved edits, the
+  save is held and the user is asked: Overwrite, Reload from disk, or Cancel. This applies
+  to every file type.
 - The Markdown toolbar controls, the outline panel, Focus Mode and export (PDF / HTML /
   Word) apply to Markdown only and are hidden or disabled for other types. The command
   palette lists only the commands that apply to the open file.
@@ -151,9 +168,16 @@ file type; the TipTap instance stays mounted so switching back to Markdown is in
 
 - Read as bytes, not as a UTF-8 string. Sniff the first 8 KB: a NUL byte means binary.
   Decode with a fatal UTF-8 decoder; failure means "not UTF-8" (read-only).
-- `OpenFileResult` gains `kind: 'text' | 'binary'`, `readOnly`, `hasBom`, `eol`
-  (`'\n' | '\r\n'`) and `size`. For the Code and Table views, the BOM and line endings found
-  on load are restored on save. The Rich view keeps its current behaviour.
+- A UTF-16 LE/BE byte-order mark is checked before the NUL sniff and selects that encoding.
+  Text that fails UTF-8 decoding is decoded as Windows-1252 for display and marked
+  read-only.
+- `OpenFileResult` gains `kind: 'text' | 'binary'`, `readOnly`, `encoding`, `hasBom`, `eol`
+  (`'\n' | '\r\n'`), `size` and `mtimeMs`. Saves pass the encoding, BOM and line ending
+  back so the file is written as it was found. For the Rich view the BOM and encoding are
+  restored too; its line-ending behaviour stays as it is today.
+- `FILE_SAVE` takes the `mtimeMs` the renderer last saw and refuses to write if the file on
+  disk is newer, returning a conflict result; it returns the new `mtimeMs` on success. No
+  file watching: the check happens on save and on window focus.
 - The two copies of the Open dialog (File menu in `menu.ts`, toolbar in `fileHandlers.ts`)
   become one shared function, with filters: All Supported, Markdown, Data (JSON, XML, CSV),
   All Files.
@@ -162,7 +186,7 @@ file type; the TipTap instance stays mounted so switching back to Markdown is in
 
 ### Code view
 
-- Packages: `codemirror`, `@codemirror/lang-json`, `@codemirror/lang-xml`,
+- New packages (plus `@tanstack/react-virtual` for the table): `codemirror`, `@codemirror/lang-json`, `@codemirror/lang-xml`,
   `@codemirror/lint`, `@codemirror/search`, `@codemirror/language-data` (lazy language
   loading for other extensions).
 - JSON formatting: `jsonc-parser`'s `format`, which edits whitespace only and so cannot
@@ -188,13 +212,17 @@ file type; the TipTap instance stays mounted so switching back to Markdown is in
 
 ### Table view
 
-- Parse and serialise with `papaparse` (handles quoting, embedded newlines, separator
-  detection).
-- Model: `string[][]` plus `{ delimiter, eol, hasBom, quoteAll }`. `quoteAll` is true when
-  every field in the original was quoted, and then every field is quoted on save; otherwise
-  only fields that need it are quoted.
-- Rows shorter than the widest row are padded with empty cells for display. On save, rows
-  are written at the full width.
+- A small hand-written CSV tokenizer (RFC 4180 quoting, embedded newlines) rather than a
+  library, because each row must keep its original raw text. Separator detection: `.tsv`
+  is tab; otherwise the candidate (`,` `;` tab) that gives the most consistent column count
+  over the first 20 rows.
+- Model: rows of `{ cells: string[], raw: string | null }` plus `{ delimiter, eol, encoding,
+  hasBom, finalNewline }`. `raw` is the row's original text and is written back verbatim;
+  editing a cell in a row, or adding/removing a column, sets that row's `raw` to null and it
+  is then serialised from `cells` with minimal quoting. Sorting moves rows without touching
+  `raw`.
+- Rows shorter than the widest row are padded with empty cells for display only; an
+  untouched ragged row is still written back verbatim.
 - Rendering is windowed (`@tanstack/react-virtual`) so only visible rows are in the DOM.
   Target: a 50,000-row file scrolls smoothly.
 - Undo/redo is a simple history stack of operations owned by the table view.
@@ -226,7 +254,8 @@ new API fields are added.
 Each step leaves the app releasable.
 
 1. Plumbing: file types, document-surface contract, byte-level reading with binary and
-   encoding guards, shared Open dialog, plain-text Code view. After this, `.log` and other
+   encoding guards, changed-on-disk check, drop-to-open, shared Open dialog, plain-text
+   Code view. After this, `.log` and other
    text files open.
 2. JSON: colours, formatting on open and save, error flagging.
 3. XML: the same.
@@ -240,7 +269,9 @@ Each step leaves the app releasable.
   formatting leaves values untouched (large integers, `1.0`, duplicate keys, key order,
   unicode escapes); XML formatting leaves mixed content, CDATA and comments untouched;
   CSV parse → serialise is byte-identical for an unedited file across separators, quoting
-  styles, line endings and BOM; sort and structural edits.
+  styles (including mixed), ragged rows, line endings, BOM and missing final newline;
+  editing one cell changes only that row's bytes; sort and structural edits;
+  the save-conflict check; UTF-16 round-trip.
 - In-app check on macOS through the DevTools protocol for each type: open, edit, auto-save,
   reopen, and confirm the bytes on disk. Use a scratch folder, never the user's documents.
 - Windows is built but not exercised by Claude; Micah checks it before release.
