@@ -39,8 +39,8 @@ It also opens the other text files you run into every day: JSON and XML pretty-p
 
 | Platform | Installer | Requires |
 |---|---|---|
-| macOS (Apple Silicon) | [Lumina-1.6.11-arm64.dmg](https://github.com/micahman33/lumina/releases/download/v1.6.11/Lumina-1.6.11-arm64.dmg) | macOS 13+ · M1/M2/M3/M4 |
-| Windows (x64) | [Lumina Setup 1.6.11.exe](https://github.com/micahman33/lumina/releases/download/v1.6.11/Lumina.Setup.1.6.11.exe) | Windows 10/11 |
+| macOS (Apple Silicon) | [Lumina-1.7.0-arm64.dmg](https://github.com/micahman33/lumina/releases/download/v1.7.0/Lumina-1.7.0-arm64.dmg) | macOS 13+ · M1/M2/M3/M4 |
+| Windows (x64) | [Lumina Setup 1.7.0.exe](https://github.com/micahman33/lumina/releases/download/v1.7.0/Lumina.Setup.1.7.0.exe) | Windows 10/11 |
 
 **macOS:** Download the `.dmg` and drag Lumina to `/Applications`.
 
