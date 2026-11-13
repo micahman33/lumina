@@ -27,6 +27,22 @@ Open any \`.md\` file and it just works — no configuration, no plugins, no fri
 > The best tool is the one you forget you're using.`,
   },
   {
+    path: '/demo/app-settings.json',
+    name: 'app-settings.json',
+    content: '{"app":"Lumina","version":"1.7.0","theme":{"mode":"system","accent":"#5B6CFF"},"editor":{"autoSave":true,"autoSaveDelayMs":2000,"spellCheck":true},"recentFiles":["README.md","todo-weekly-sprint.md"],"experimental":null}',
+  },
+  {
+    path: '/demo/team-roster.csv',
+    name: 'team-roster.csv',
+    content: `name,role,location,start_year
+Ada Park,Design Lead,Lisbon,2021
+"Okafor, Chidi",Engineering,Lagos,2019
+Mei Tanaka,Product,Osaka,2023
+Lars Nyberg,Engineering,Stockholm,2020
+Priya Raman,Support,Chennai,2022
+`,
+  },
+  {
     path: '/demo/ai-product-brief.md',
     name: 'ai-product-brief.md',
     content: `# AI Product Brief
